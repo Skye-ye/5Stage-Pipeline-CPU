@@ -8,6 +8,7 @@ module hazard_detection_unit(
     input RegWrite_EX,            // register write enable in EX stage
     input RegWrite_MEM,           // register write enable in MEM stage
     input MemRead_EX,             // memory read in EX stage (load instruction)
+    input MemWrite_ID,            // memory write in ID stage (store instruction)
     input BranchTaken,            // branch taken signal
     input IsBranch_ID,            // indicates if current ID instruction is a branch
     
@@ -17,9 +18,18 @@ module hazard_detection_unit(
 );
 
     // Load-use hazard detection
+    // For store instructions, WB→MEM forwarding can resolve hazards on rs2 (store data)
+    // Only stall if:
+    // 1. It's a load instruction in EX stage
+    // 2. Next instruction depends on the load result
+    // 3. Either it's not a store, or it depends on rs1 (can't forward address calculation)
     wire load_use_hazard;
+    wire rs1_hazard = (rd_EX == rs1_ID);
+    wire rs2_hazard = (rd_EX == rs2_ID);
+    wire rs2_can_forward = MemWrite_ID && rs2_hazard && !rs1_hazard;
+    
     assign load_use_hazard = MemRead_EX && RegWrite_EX && rd_EX != 0 &&
-                            ((rd_EX == rs1_ID) || (rd_EX == rs2_ID));
+                            (rs1_hazard || (rs2_hazard && !rs2_can_forward));
     
     // Branch-load hazard detection (branch depends on load result)
     wire branch_load_hazard;

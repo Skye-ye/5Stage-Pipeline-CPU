@@ -32,7 +32,7 @@ module pipeline_cpu(
 
     // EX/MEM Pipeline Register
     reg [31:0] EXMEM_PC4, EXMEM_ALUOut, EXMEM_RD2;
-    reg [4:0] EXMEM_rd;
+    reg [4:0] EXMEM_rd, EXMEM_rs2;
     reg [2:0] EXMEM_DMType;
     reg [1:0] EXMEM_WDSel;
     reg EXMEM_RegWrite, EXMEM_MemWrite, EXMEM_Zero;
@@ -49,6 +49,7 @@ module pipeline_cpu(
     wire stall, flush_IFID, flush_IDEX;
     wire [1:0] forwardA, forwardB;
     wire BranchTaken;
+    wire forwardMEM;
     
     // Branch forwarding signals for ID stage
     wire [1:0] forwardA_branch, forwardB_branch;
@@ -287,6 +288,7 @@ module pipeline_cpu(
             EXMEM_ALUOut <= 32'h00000000;
             EXMEM_RD2 <= 32'h00000000;
             EXMEM_rd <= 5'b00000;
+            EXMEM_rs2 <= 5'b00000;
             EXMEM_DMType <= 3'b000;
             EXMEM_WDSel <= 2'b00;
             EXMEM_RegWrite <= 1'b0;
@@ -298,6 +300,7 @@ module pipeline_cpu(
             EXMEM_ALUOut <= ALUOut_EX;
             EXMEM_RD2 <= ALU_B_forwarded; // Use forwarded data for store
             EXMEM_rd <= IDEX_rd;
+            EXMEM_rs2 <= IDEX_rs2;
             EXMEM_DMType <= IDEX_DMType;
             EXMEM_WDSel <= IDEX_WDSel;
             EXMEM_RegWrite <= IDEX_RegWrite;
@@ -310,7 +313,7 @@ module pipeline_cpu(
 // ======= 5 MEM stage design =======
     // Memory interface
     assign Addr_out = EXMEM_ALUOut;
-    assign Data_out = EXMEM_RD2;
+    assign Data_out = forwardMEM ? WriteData_WB : EXMEM_RD2;
     assign DMType_out = EXMEM_DMType;
     assign mem_w = EXMEM_MemWrite & EXMEM_valid;
 
@@ -356,6 +359,7 @@ module pipeline_cpu(
         .RegWrite_EX(IDEX_RegWrite),
         .RegWrite_MEM(EXMEM_RegWrite),
         .MemRead_EX(IDEX_WDSel == `WDSel_FromMEM),
+        .MemWrite_ID(MemWrite_ID),
         .BranchTaken(BranchTaken),
         .IsBranch_ID(IsBranch_ID),
         .stall(stall),
@@ -369,6 +373,7 @@ module pipeline_cpu(
         .rs2_EX(IDEX_rs2),
         .rs1_ID(rs1_ID),
         .rs2_ID(rs2_ID),
+        .rs2_MEM(EXMEM_rs2),
         .rd_MEM(EXMEM_rd),
         .rd_WB(MEMWB_rd),
         .RegWrite_MEM(EXMEM_RegWrite),
@@ -376,7 +381,8 @@ module pipeline_cpu(
         .forwardA(forwardA),
         .forwardB(forwardB),
         .forwardA_branch(forwardA_branch),
-        .forwardB_branch(forwardB_branch)
+        .forwardB_branch(forwardB_branch),
+        .forwardMEM(forwardMEM)
     );
 
     // Debug register output
