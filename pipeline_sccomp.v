@@ -1,12 +1,16 @@
-module pipeline_sccomp(clk, rstn, reg_sel, reg_data);
-   input          clk;
-   input          rstn;
-   input [4:0]    reg_sel;
-   output [31:0]  reg_data;
+module pipeline_sccomp #(
+    parameter INSTR_FILE = "./instr/non_data_sim5.dat"
+)(
+    input          clk,
+    input          rstn,
+    input [4:0]    reg_sel,
+    output [31:0]  reg_data
+);
    
    wire [31:0]    instr;
    wire [31:0]    PC;
    wire           MemWrite;
+   wire [2:0]     DMType;
    wire [31:0]    dm_addr, dm_din, dm_dout;
    
    wire rst = ~rstn;
@@ -18,6 +22,7 @@ module pipeline_sccomp(clk, rstn, reg_sel, reg_data);
          .inst_in(instr),           // input:  instruction
          .Data_in(dm_dout),         // input:  data to cpu  
          .mem_w(MemWrite),          // output: memory write signal
+         .DMType_out(DMType),       // output: data memory type
          .PC_out(PC),               // output: PC
          .Addr_out(dm_addr),        // output: address from cpu to memory
          .Data_out(dm_din),         // output: data from cpu to memory
@@ -29,13 +34,14 @@ module pipeline_sccomp(clk, rstn, reg_sel, reg_data);
    dm    U_DM(
          .clk(clk),           // input:  cpu clock
          .DMWr(MemWrite),     // input:  ram write
-         .addr(dm_addr[8:2]), // input:  ram address
+         .addr(dm_addr),      // input:  full ram address
          .din(dm_din),        // input:  data to ram
-         .dout(dm_dout)       // output: data from ram
+         .dout(dm_dout),      // output: data from ram
+         .DMType(DMType)      // input:  data memory type
          );
          
   // instantiation of instruction memory (used for simulation)
-   im    U_IM ( 
+   im #(.INSTR_FILE(INSTR_FILE)) U_IM ( 
       .addr(PC[8:2]),     // input:  rom address
       .dout(instr)        // output: instruction
    );

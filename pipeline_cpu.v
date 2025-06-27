@@ -7,6 +7,7 @@ module pipeline_cpu(
     input [31:0]  Data_in,     // data from data memory
    
     output    mem_w,          // memory write signal
+    output [2:0] DMType_out,  // data memory type signal
     output [31:0] PC_out,     // PC address for instruction memory
     output [31:0] Addr_out,   // address for data memory
     output [31:0] Data_out,   // data to data memory
@@ -24,7 +25,7 @@ module pipeline_cpu(
     reg [31:0] IDEX_PC, IDEX_PC4, IDEX_RD1, IDEX_RD2, IDEX_imm;
     reg [4:0] IDEX_rs1, IDEX_rs2, IDEX_rd;
     reg [4:0] IDEX_ALUOp;
-    reg [2:0] IDEX_NPCOp;
+    reg [2:0] IDEX_NPCOp, IDEX_DMType;
     reg [1:0] IDEX_WDSel;
     reg IDEX_RegWrite, IDEX_MemWrite, IDEX_ALUSrc;
     reg IDEX_valid;
@@ -32,6 +33,7 @@ module pipeline_cpu(
     // EX/MEM Pipeline Register
     reg [31:0] EXMEM_PC4, EXMEM_ALUOut, EXMEM_RD2;
     reg [4:0] EXMEM_rd;
+    reg [2:0] EXMEM_DMType;
     reg [1:0] EXMEM_WDSel;
     reg EXMEM_RegWrite, EXMEM_MemWrite, EXMEM_Zero;
     reg EXMEM_valid;
@@ -106,7 +108,7 @@ module pipeline_cpu(
 
 // ======= 3 ID stage design =======
     // Control Unit Instance
-    wire [2:0] DMType_unused;
+    wire [2:0] DMType_ID;
     ctrl U_ctrl(
         .Op(IFID_inst[6:0]), 
         .Funct7(IFID_inst[31:25]), 
@@ -119,7 +121,7 @@ module pipeline_cpu(
         .NPCOp(NPCOp_ID), 
         .ALUSrc(ALUSrc_ID), 
         .WDSel(WDSel_ID),  
-        .DMType(DMType_unused) // Not used (invalid interface)
+        .DMType(DMType_ID)
     );
 
     // Register File Instance
@@ -216,6 +218,7 @@ module pipeline_cpu(
             IDEX_rd <= 5'b00000;
             IDEX_ALUOp <= 5'b00000;
             IDEX_NPCOp <= 3'b000;
+            IDEX_DMType <= 3'b000;
             IDEX_WDSel <= 2'b00;
             IDEX_RegWrite <= 1'b0;
             IDEX_MemWrite <= 1'b0;
@@ -232,6 +235,7 @@ module pipeline_cpu(
             IDEX_rd <= rd_ID;
             IDEX_ALUOp <= ALUOp_ID;
             IDEX_NPCOp <= NPCOp_ID;
+            IDEX_DMType <= DMType_ID;
             IDEX_WDSel <= WDSel_ID;
             IDEX_RegWrite <= RegWrite_ID;
             IDEX_MemWrite <= MemWrite_ID;
@@ -283,6 +287,7 @@ module pipeline_cpu(
             EXMEM_ALUOut <= 32'h00000000;
             EXMEM_RD2 <= 32'h00000000;
             EXMEM_rd <= 5'b00000;
+            EXMEM_DMType <= 3'b000;
             EXMEM_WDSel <= 2'b00;
             EXMEM_RegWrite <= 1'b0;
             EXMEM_MemWrite <= 1'b0;
@@ -293,6 +298,7 @@ module pipeline_cpu(
             EXMEM_ALUOut <= ALUOut_EX;
             EXMEM_RD2 <= ALU_B_forwarded; // Use forwarded data for store
             EXMEM_rd <= IDEX_rd;
+            EXMEM_DMType <= IDEX_DMType;
             EXMEM_WDSel <= IDEX_WDSel;
             EXMEM_RegWrite <= IDEX_RegWrite;
             EXMEM_MemWrite <= IDEX_MemWrite;
@@ -305,6 +311,7 @@ module pipeline_cpu(
     // Memory interface
     assign Addr_out = EXMEM_ALUOut;
     assign Data_out = EXMEM_RD2;
+    assign DMType_out = EXMEM_DMType;
     assign mem_w = EXMEM_MemWrite & EXMEM_valid;
 
     // MEM/WB Pipeline Register

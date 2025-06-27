@@ -1,9 +1,3 @@
-# Test the RISC-V processor in simulation
-# 待验证：lui, auipc, addi
-# 待验证： sb, sh, sw, lb, lh, lw, lbu, lhu
-# 本测试只验证单条指令的功能，不考察转发和冒险检测的功能，所以在相关指令之间添加了足够多的nop指令
-
-#		Assembly				Description
 main:	lui 	x5, 0xF1F2F		#x5寄存器的高20位设置为0xF1F2F
 		auipc	x6, 0x6 		#x6寄存器的结果设置为0x6004
 		addi	x0, x0, 0		#nop指令

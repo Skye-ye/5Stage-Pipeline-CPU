@@ -8,7 +8,13 @@ module pipeline_sccomp_tb();
     wire [31:0] reg_data;
     
     // Instantiate the pipeline CPU
-    pipeline_sccomp U_pipeline_sccomp(
+    pipeline_sccomp #(
+`ifdef INSTR_FILE
+        .INSTR_FILE(`INSTR_FILE)
+`else
+        .INSTR_FILE("./instr/non_data_sim5.dat")
+`endif
+    ) U_pipeline_sccomp(
         .clk(clk),
         .rstn(rstn),
         .reg_sel(reg_sel),
