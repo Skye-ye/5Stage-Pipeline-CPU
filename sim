@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# Enhanced simulation script with configurable instruction file
+# Usage: ./run_sim [directory] [sim_number]
+# Examples: 
+#   ./run_sim forwarding 1       (runs instr/forwarding/sim1.dat)
+#   ./run_sim non_forwarding 6   (runs instr/non_forwarding/sim6.dat)  
+#   ./run_sim 6                  (runs instr/non_forwarding/sim6.dat - default dir)
+#   ./run_sim                    (runs instr/non_forwarding/sim5.dat - default)
+
+# Default values
+DEFAULT_DIR="non_forwarding"
+DEFAULT_SIM=5
+
+# Parse command line arguments
+if [ $# -eq 0 ]; then
+    DIR=$DEFAULT_DIR
+    SIM_NUM=$DEFAULT_SIM
+    echo "No arguments specified. Using default: instr/${DIR}/sim${SIM_NUM}.dat"
+elif [ $# -eq 1 ]; then
+    # Check if argument is a number (sim file) or directory name
+    case $1 in
+        ''|*[!0-9]*) 
+            DIR=$1
+            SIM_NUM=$DEFAULT_SIM
+            echo "Using instruction file: instr/${DIR}/sim${SIM_NUM}.dat"
+            ;;
+        *) 
+            DIR=$DEFAULT_DIR
+            SIM_NUM=$1
+            echo "Using instruction file: instr/${DIR}/sim${SIM_NUM}.dat"
+            ;;
+    esac
+elif [ $# -eq 2 ]; then
+    DIR=$1
+    SIM_NUM=$2
+    echo "Using instruction file: instr/${DIR}/sim${SIM_NUM}.dat"
+else
+    echo "Usage: $0 [directory] [sim_number]"
+    echo "Available directories:"
+    ls -1 instr/ | grep -v '\.'
+    echo "Available sim files:"
+    find instr/ -name "sim*.dat" | sort
+    exit 1
+fi
+
+# Set the instruction file path
+INSTR_FILE="\"./instr/${DIR}/sim${SIM_NUM}.dat\""
+
+# Check if the instruction file exists
+if [ ! -f "./instr/${DIR}/sim${SIM_NUM}.dat" ]; then
+    echo "Error: Instruction file instr/${DIR}/sim${SIM_NUM}.dat not found!"
+    echo ""
+    echo "Available directories:"
+    ls -1 instr/ | grep -v '\.'
+    echo ""
+    echo "Available sim files:"
+    find instr/ -name "sim*.dat" | sort
+    exit 1
+fi
+
+echo "Compiling with instruction file: ${INSTR_FILE}"
+
+# Compile with the specified instruction file
+iverilog -D INSTR_FILE=${INSTR_FILE} -o pipeline_cpu_sim.out \
+    ctrl_encode_def.v alu.v ctrl.v dm.v EXT.v im.v RF.v \
+    hazard_detection_unit.v forwarding_unit.v \
+    pipeline_cpu.v pipeline_sccomp.v pipeline_sccomp_tb.v
+
+if [ $? -ne 0 ]; then
+    echo "Compilation failed!"
+    exit 1
+fi
+
+echo "Running simulation..."
+vvp pipeline_cpu_sim.out
+
+echo "Simulation complete!"
+echo "VCD file: pipeline_cpu.vcd"

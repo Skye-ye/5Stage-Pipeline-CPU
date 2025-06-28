@@ -87,7 +87,7 @@ module pipeline_cpu(
     always @(posedge clk) begin
         if (reset) begin
             PC_IF <= 32'h00000000;
-        end else if (!stall) begin
+        end else if (!stall || BranchTaken) begin
             PC_IF <= NPC;
         end
     end
@@ -159,6 +159,7 @@ module pipeline_cpu(
 
     // Branch Detection in ID Stage
     wire IsBranch_ID = (NPCOp_ID == `NPC_BRANCH);
+    wire IsJALR_ID = (NPCOp_ID == `NPC_JALR);
     wire is_jump_ID = (NPCOp_ID == `NPC_JUMP) || (NPCOp_ID == `NPC_JALR);
     
     // Branch forwarding mux for register A
@@ -167,7 +168,8 @@ module pipeline_cpu(
         case (forwardA_branch)
             2'b00: branch_A = RD1_ID;              // No forwarding
             2'b01: branch_A = WriteData_WB;        // Forward from WB stage
-            2'b10: branch_A = EXMEM_ALUOut;        // Forward from MEM stage
+            2'b10: branch_A = (EXMEM_WDSel == `WDSel_FromMEM) ? MEMWB_MemData : EXMEM_ALUOut;  // Forward from MEM stage (use loaded data, not raw memory input)
+            2'b11: branch_A = ALUOut_EX;           // Forward from EX stage
             default: branch_A = RD1_ID;
         endcase
     end
@@ -178,7 +180,8 @@ module pipeline_cpu(
         case (forwardB_branch)
             2'b00: branch_B = RD2_ID;              // No forwarding
             2'b01: branch_B = WriteData_WB;        // Forward from WB stage
-            2'b10: branch_B = EXMEM_ALUOut;        // Forward from MEM stage
+            2'b10: branch_B = (EXMEM_WDSel == `WDSel_FromMEM) ? MEMWB_MemData : EXMEM_ALUOut;  // Forward from MEM stage (use loaded data, not raw memory input)
+            2'b11: branch_B = ALUOut_EX;           // Forward from EX stage
             default: branch_B = RD2_ID;
         endcase
     end
@@ -198,8 +201,12 @@ module pipeline_cpu(
         endcase
     end
     
+    // JALR-load hazard signal from hazard detection unit
+    wire jalr_load_hazard_detected;
+    assign jalr_load_hazard_detected = IsJALR_ID && (stall && (IDEX_WDSel == `WDSel_FromMEM || EXMEM_WDSel == `WDSel_FromMEM));
+    
     assign branch_condition = IsBranch_ID & branch_result;
-    assign BranchTaken = branch_condition | is_jump_ID;
+    assign BranchTaken = branch_condition | (is_jump_ID & !jalr_load_hazard_detected);
     
     // Branch target calculation
     wire [31:0] branch_target = (NPCOp_ID == `NPC_JALR) ? 
@@ -359,9 +366,11 @@ module pipeline_cpu(
         .RegWrite_EX(IDEX_RegWrite),
         .RegWrite_MEM(EXMEM_RegWrite),
         .MemRead_EX(IDEX_WDSel == `WDSel_FromMEM),
+        .MemRead_MEM(EXMEM_WDSel == `WDSel_FromMEM),
         .MemWrite_ID(MemWrite_ID),
         .BranchTaken(BranchTaken),
         .IsBranch_ID(IsBranch_ID),
+        .IsJALR_ID(IsJALR_ID),
         .stall(stall),
         .flush_IFID(flush_IFID),
         .flush_IDEX(flush_IDEX)
@@ -374,8 +383,10 @@ module pipeline_cpu(
         .rs1_ID(rs1_ID),
         .rs2_ID(rs2_ID),
         .rs2_MEM(EXMEM_rs2),
+        .rd_EX(IDEX_rd),
         .rd_MEM(EXMEM_rd),
         .rd_WB(MEMWB_rd),
+        .RegWrite_EX(IDEX_RegWrite),
         .RegWrite_MEM(EXMEM_RegWrite),
         .RegWrite_WB(MEMWB_RegWrite),
         .forwardA(forwardA),
