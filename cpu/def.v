@@ -52,3 +52,9 @@
 `define dm_byte 3'b011
 `define dm_byte_unsigned 3'b100
 
+// Common constants
+`define NOP_INSTRUCTION 32'h00000013  // addi x0, x0, 0
+`define RESET_PC 32'h00000000
+`define PC_INCREMENT 32'h00000004
+`define REG_ZERO 5'b00000
+

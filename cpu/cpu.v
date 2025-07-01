@@ -1,120 +1,124 @@
-`include "ctrl_encode_def.v"
+`include "def.v"
 
-module pipeline_cpu(
-    input      clk,            // clock
-    input      reset,          // reset
-    input [31:0]  inst_in,     // instruction from instruction memory
-    input [31:0]  Data_in,     // data from data memory
-   
-    output    mem_w,          // memory write signal
-    output [2:0] DMType_out,  // data memory type signal
-    output [31:0] PC_out,     // PC address for instruction memory
+module cpu(
+    // Clock and Reset
+    input        clk,         // system clock
+    input        reset,       // active high reset
+    
+    // Memory Interface
+    input  [31:0] inst_in,    // instruction from instruction memory
+    input  [31:0] Data_in,    // data from data memory
+    output        mem_w,      // memory write enable
+    output [2:0]  DMType_out, // data memory access type
+    output [31:0] PC,         // PC address for instruction memory
     output [31:0] Addr_out,   // address for data memory
     output [31:0] Data_out,   // data to data memory
-
-    input  [4:0] reg_sel,     // register selection (for debug use)
-    output [31:0] reg_data    // selected register data (for debug use)
+    
+    // Debug Interface
+    input  [4:0]  reg_sel,    // register selection for debug
+    output [31:0] reg_data    // selected register data for debug
 );
 
-// ======= 1 pipeline registers design  =======
-    // IF/ID Pipeline Register
-    reg [31:0] IFID_PC, IFID_PC4, IFID_inst;
-    reg IFID_valid;
-
-    // ID/EX Pipeline Register  
-    reg [31:0] IDEX_PC, IDEX_PC4, IDEX_RD1, IDEX_RD2, IDEX_imm;
-    reg [4:0] IDEX_rs1, IDEX_rs2, IDEX_rd;
-    reg [4:0] IDEX_ALUOp;
-    reg [2:0] IDEX_NPCOp, IDEX_DMType;
-    reg [1:0] IDEX_WDSel;
-    reg IDEX_RegWrite, IDEX_MemWrite, IDEX_ALUSrc;
-    reg IDEX_valid;
-
-    // EX/MEM Pipeline Register
-    reg [31:0] EXMEM_PC4, EXMEM_ALUOut, EXMEM_RD2;
-    reg [4:0] EXMEM_rd, EXMEM_rs2;
-    reg [2:0] EXMEM_DMType;
-    reg [1:0] EXMEM_WDSel;
-    reg EXMEM_RegWrite, EXMEM_MemWrite, EXMEM_Zero;
-    reg EXMEM_valid;
-
-    // MEM/WB Pipeline Register
-    reg [31:0] MEMWB_PC4, MEMWB_ALUOut, MEMWB_MemData;
-    reg [4:0] MEMWB_rd;
-    reg [1:0] MEMWB_WDSel;
-    reg MEMWB_RegWrite;
-    reg MEMWB_valid;
-
-    // Hazard Detection and Forwarding Signals
-    wire stall, flush_IFID, flush_IDEX;
-    wire [1:0] forwardA, forwardB;
-    wire BranchTaken;
-    wire forwardMEM;
+    // ========== Pipeline Register Declarations ==========
     
-    // Branch forwarding signals for ID stage
-    wire [1:0] forwardA_branch, forwardB_branch;
+    // IF/ID Pipeline Register
+    reg [31:0] IFID_PC, IFID_PCPLUS4, IFID_inst;
+    reg        IFID_valid;
+    
+    // ID/EX Pipeline Register
+    reg [31:0] IDEX_PC, IDEX_PCPLUS4, IDEX_RD1, IDEX_RD2, IDEX_imm;
+    reg [4:0]  IDEX_rs1, IDEX_rs2, IDEX_rd;
+    reg [4:0]  IDEX_ALUOp;
+    reg [2:0]  IDEX_NPCOp, IDEX_DMType;
+    reg [1:0]  IDEX_WDSel;
+    reg        IDEX_RegWrite, IDEX_MemWrite, IDEX_ALUSrc;
+    reg        IDEX_valid;
+    
+    // EX/MEM Pipeline Register
+    reg [31:0] EXMEM_PCPLUS4, EXMEM_ALUOut, EXMEM_RD2;
+    reg [4:0]  EXMEM_rd, EXMEM_rs2;
+    reg [2:0]  EXMEM_DMType;
+    reg [1:0]  EXMEM_WDSel;
+    reg        EXMEM_RegWrite, EXMEM_MemWrite, EXMEM_Zero;
+    reg        EXMEM_valid;
+    
+    // MEM/WB Pipeline Register
+    reg [31:0] MEMWB_PCPLUS4, MEMWB_ALUOut, MEMWB_MemData;
+    reg [4:0]  MEMWB_rd;
+    reg [1:0]  MEMWB_WDSel;
+    reg        MEMWB_RegWrite;
+    reg        MEMWB_valid;
 
-    // Control signals
-    wire RegWrite_ID, MemWrite_ID, ALUSrc_ID;
+    // ========== Control and Data Path Signals ==========
+    
+    // Hazard Detection and Forwarding
+    wire       stall, flush_IFID, flush_IDEX;
+    wire [1:0] forwardA, forwardB;
+    wire [1:0] forwardA_branch, forwardB_branch;
+    wire       forwardMEM;
+    wire       BranchTaken;
+    
+    // Control Signals from ID Stage
+    wire       RegWrite_ID, MemWrite_ID, ALUSrc_ID;
     wire [4:0] ALUOp_ID;
     wire [2:0] NPCOp_ID;
     wire [1:0] WDSel_ID;
     wire [5:0] EXTOp_ID;
+    
+    // Data Path Signals
+    reg  [31:0] IF_PC;                    // Program Counter
+    wire [31:0] IF_PCPLUS4, NPC;              // PC+4 and Next PC
+    wire [31:0] RD1_ID, RD2_ID, imm_ID;   // Register data and immediate
+    wire [4:0]  rs1_ID, rs2_ID, rd_ID;    // Register addresses
+    wire [31:0] ALU_B, ALUOut_EX;         // ALU inputs and output
+    reg  [31:0] ALU_A;                    // ALU input A (with forwarding)
+    reg  [31:0] WriteData_WB;             // Write back data
+    wire        Zero_EX;                  // ALU zero flag
 
-    // Data paths
-    reg [31:0] PC_IF;
-    wire [31:0] PC4_IF, NPC;
-    wire [31:0] inst_ID;
-    wire [31:0] RD1_ID, RD2_ID, imm_ID;
-    wire [4:0] rs1_ID, rs2_ID, rd_ID;
-    wire [31:0] ALU_B, ALUOut_EX;
-    reg [31:0] ALU_A;
-    reg [31:0] WriteData_WB;
-    wire Zero_EX;
+    // ========== Instruction Field Extraction ==========
+    assign rs1_ID = IFID_inst[19:15];     // Source register 1
+    assign rs2_ID = IFID_inst[24:20];     // Source register 2
+    assign rd_ID  = IFID_inst[11:7];      // Destination register
+    
+    // ========== PC Logic ==========
+    assign IF_PCPLUS4 = IF_PC + 4;            // PC + 4
+    assign NPC = BranchTaken ? branch_target : IF_PCPLUS4;
+    assign PC = IF_PC;                // Output PC to instruction memory
 
-    // Instruction fields
-    assign rs1_ID = IFID_inst[19:15];
-    assign rs2_ID = IFID_inst[24:20]; 
-    assign rd_ID = IFID_inst[11:7];
-
-    // PC Logic
-    assign PC4_IF = PC_IF + 4;
-    assign NPC = BranchTaken ? branch_target : PC4_IF;
-    assign PC_out = PC_IF;
-
-// ======= 2 IF stage design =======
-    // PC Register (move PC module outside, more directly)
+    // ========== 1 IF Stage ==========
+    
+    // Program Counter Register
     always @(posedge clk) begin
         if (reset) begin
-            PC_IF <= 32'h00000000;
+            IF_PC <= `RESET_PC;
         end else if (!stall || BranchTaken) begin
-            PC_IF <= NPC;
+            IF_PC <= NPC;
         end
     end
-
-    // IF/ID Pipeline Register setup
+    
+    // IF/ID Pipeline Register
     always @(posedge clk) begin
         if (reset || flush_IFID) begin
-            IFID_PC <= 32'h00000000;
-            IFID_PC4 <= 32'h00000004;
-            IFID_inst <= 32'h00000013; // nop (addi x0, x0, 0)
+            IFID_PC    <= `RESET_PC;
+            IFID_PCPLUS4   <= `PC_INCREMENT;
+            IFID_inst  <= `NOP_INSTRUCTION;
             IFID_valid <= 1'b0;
         end else if (!stall) begin
-            IFID_PC <= PC_IF;
-            IFID_PC4 <= PC4_IF;
-            IFID_inst <= inst_in;
+            IFID_PC    <= IF_PC;
+            IFID_PCPLUS4   <= IF_PCPLUS4;
+            IFID_inst  <= inst_in;
             IFID_valid <= 1'b1;
         end
     end
 
-// ======= 3 ID stage design =======
+    // ========== 2 ID Stage ==========
     // Control Unit Instance
     wire [2:0] DMType_ID;
-    ctrl U_ctrl(
+    ctrl U_CTRL(
         .Op(IFID_inst[6:0]), 
         .Funct7(IFID_inst[31:25]), 
-        .Funct3(IFID_inst[14:12]), 
-        .Zero(1'b0), // Zero flag not used in ID stage (put it later)
+        .Funct3(IFID_inst[14:12]),
+        .Zero(1'b0), 
         .RegWrite(RegWrite_ID), 
         .MemWrite(MemWrite_ID),
         .EXTOp(EXTOp_ID), 
@@ -126,7 +130,7 @@ module pipeline_cpu(
     );
 
     // Register File Instance
-    RF U_RF(
+    rf U_RF(
         .clk(clk), 
         .rst(reset),
         .RFWr(MEMWB_RegWrite & MEMWB_valid), 
@@ -146,7 +150,7 @@ module pipeline_cpu(
     wire [19:0] uimm = IFID_inst[31:12];
     wire [19:0] jimm = {IFID_inst[31], IFID_inst[19:12], IFID_inst[20], IFID_inst[30:21]};
 
-    EXT U_EXT(
+    ext U_EXT(
         .iimm_shamt(iimm_shamt), 
         .iimm(iimm), 
         .simm(simm), 
@@ -186,26 +190,21 @@ module pipeline_cpu(
         endcase
     end
     
-    // Branch condition evaluation
-    wire branch_condition;
-    reg branch_result;
-    always @(*) begin
-        case (IFID_inst[14:12]) // funct3
-            3'b000: branch_result = (branch_A == branch_B);          // BEQ
-            3'b001: branch_result = (branch_A != branch_B);          // BNE
-            3'b100: branch_result = ($signed(branch_A) < $signed(branch_B));   // BLT
-            3'b101: branch_result = ($signed(branch_A) >= $signed(branch_B));  // BGE
-            3'b110: branch_result = (branch_A < branch_B);           // BLTU
-            3'b111: branch_result = (branch_A >= branch_B);          // BGEU
-            default: branch_result = 1'b0;
-        endcase
-    end
+    // ========== Branch Condition Evaluation ==========
+    wire branch_result;
+    branch U_BRANCH(
+        .A(branch_A),
+        .B(branch_B),
+        .funct3(IFID_inst[14:12]),
+        .branch_result(branch_result)
+    );
     
     // JALR-load hazard signal from hazard detection unit
     wire jalr_load_hazard_detected;
     assign jalr_load_hazard_detected = IsJALR_ID && (stall && (IDEX_WDSel == `WDSel_FromMEM || EXMEM_WDSel == `WDSel_FromMEM));
     
-    assign branch_condition = IsBranch_ID & branch_result;
+    // Branch and jump control
+    wire branch_condition = IsBranch_ID & branch_result;
     assign BranchTaken = branch_condition | (is_jump_ID & !jalr_load_hazard_detected);
     
     // Branch target calculation
@@ -217,7 +216,7 @@ module pipeline_cpu(
     always @(posedge clk) begin
         if (reset || flush_IDEX) begin
             IDEX_PC <= 32'h00000000;
-            IDEX_PC4 <= 32'h00000004;
+            IDEX_PCPLUS4 <= 32'h00000004;
             IDEX_RD1 <= 32'h00000000;
             IDEX_RD2 <= 32'h00000000;
             IDEX_imm <= 32'h00000000;
@@ -234,7 +233,7 @@ module pipeline_cpu(
             IDEX_valid <= 1'b0;
         end else if (!stall) begin
             IDEX_PC <= IFID_PC;
-            IDEX_PC4 <= IFID_PC4;
+            IDEX_PCPLUS4 <= IFID_PCPLUS4;
             IDEX_RD1 <= RD1_ID;
             IDEX_RD2 <= RD2_ID;
             IDEX_imm <= imm_ID;
@@ -252,7 +251,7 @@ module pipeline_cpu(
         end
     end
 
-// ======= 4 EX stage design =======
+    // ========== 3 EX Stage ==========
 
     // Forwarding Mux for ALU input A
     always @(*) begin
@@ -278,7 +277,7 @@ module pipeline_cpu(
     assign ALU_B = IDEX_ALUSrc ? IDEX_imm : ALU_B_forwarded;
 
     // ALU Instance
-    alu U_alu(
+    alu U_ALU(
         .A(ALU_A), 
         .B(ALU_B), 
         .ALUOp(IDEX_ALUOp), 
@@ -291,7 +290,7 @@ module pipeline_cpu(
     // EX/MEM Pipeline Register
     always @(posedge clk) begin
         if (reset) begin
-            EXMEM_PC4 <= 32'h00000004;
+            EXMEM_PCPLUS4 <= 32'h00000004;
             EXMEM_ALUOut <= 32'h00000000;
             EXMEM_RD2 <= 32'h00000000;
             EXMEM_rd <= 5'b00000;
@@ -303,7 +302,7 @@ module pipeline_cpu(
             EXMEM_Zero <= 1'b0;
             EXMEM_valid <= 1'b0;
         end else begin
-            EXMEM_PC4 <= IDEX_PC4;
+            EXMEM_PCPLUS4 <= IDEX_PCPLUS4;
             EXMEM_ALUOut <= ALUOut_EX;
             EXMEM_RD2 <= ALU_B_forwarded; // Use forwarded data for store
             EXMEM_rd <= IDEX_rd;
@@ -317,7 +316,7 @@ module pipeline_cpu(
         end
     end
 
-// ======= 5 MEM stage design =======
+    // ========== 4 MEM Stage ==========
     // Memory interface
     assign Addr_out = EXMEM_ALUOut;
     assign Data_out = forwardMEM ? WriteData_WB : EXMEM_RD2;
@@ -327,7 +326,7 @@ module pipeline_cpu(
     // MEM/WB Pipeline Register
     always @(posedge clk) begin
         if (reset) begin
-            MEMWB_PC4 <= 32'h00000004;
+            MEMWB_PCPLUS4 <= 32'h00000004;
             MEMWB_ALUOut <= 32'h00000000;
             MEMWB_MemData <= 32'h00000000;
             MEMWB_rd <= 5'b00000;
@@ -335,7 +334,7 @@ module pipeline_cpu(
             MEMWB_RegWrite <= 1'b0;
             MEMWB_valid <= 1'b0;
         end else begin
-            MEMWB_PC4 <= EXMEM_PC4;
+            MEMWB_PCPLUS4 <= EXMEM_PCPLUS4;
             MEMWB_ALUOut <= EXMEM_ALUOut;
             MEMWB_MemData <= Data_in;
             MEMWB_rd <= EXMEM_rd;
@@ -345,20 +344,20 @@ module pipeline_cpu(
         end
     end
 
-// ======= 6 WB stage design =======
+    // ========== 5 WB Stage ==========
     // Write back data selection
     always @(*) begin
         case(MEMWB_WDSel)
             `WDSel_FromALU: WriteData_WB = MEMWB_ALUOut;
             `WDSel_FromMEM: WriteData_WB = MEMWB_MemData;
-            `WDSel_FromPC:  WriteData_WB = MEMWB_PC4;
+            `WDSel_FromPC:  WriteData_WB = MEMWB_PCPLUS4;
             default:        WriteData_WB = MEMWB_ALUOut;
         endcase
     end
 
-// ======= 7 Hazard Detection and Forwarding Units =======
+    // ==== Hazard Detection and Forwarding Units ====
     // Hazard Detection Unit
-    hazard_detection_unit U_hazard_detection(
+    hazard U_HAZARD(
         .rs1_ID(rs1_ID),
         .rs2_ID(rs2_ID),
         .rd_EX(IDEX_rd),
@@ -377,7 +376,7 @@ module pipeline_cpu(
     );
 
     // Forwarding Unit
-    forwarding_unit U_forwarding(
+    forward U_FORWARD(
         .rs1_EX(IDEX_rs1),
         .rs2_EX(IDEX_rs2),
         .rs1_ID(rs1_ID),

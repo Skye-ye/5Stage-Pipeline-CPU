@@ -1,4 +1,4 @@
-module pipeline_sccomp #(
+module comp #(
     parameter INSTR_FILE = "./instr/non_data_sim5.dat"
 )(
     input          clk,
@@ -16,14 +16,14 @@ module pipeline_sccomp #(
    wire rst = ~rstn;
        
   // instantiation of pipeline CPU   
-   pipeline_cpu U_pipeline_CPU(
+   cpu U_CPU(
          .clk(clk),                 // input:  cpu clock
          .reset(rst),               // input:  reset
          .inst_in(instr),           // input:  instruction
          .Data_in(dm_dout),         // input:  data to cpu  
          .mem_w(MemWrite),          // output: memory write signal
          .DMType_out(DMType),       // output: data memory type
-         .PC_out(PC),               // output: PC
+         .PC(PC),                   // output: PC
          .Addr_out(dm_addr),        // output: address from cpu to memory
          .Data_out(dm_din),         // output: data from cpu to memory
          .reg_sel(reg_sel),         // input:  register selection

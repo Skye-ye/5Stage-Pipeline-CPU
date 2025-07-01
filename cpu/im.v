@@ -7,7 +7,7 @@ module im #(
     output [31:0] dout 
 );
 
-  reg  [31:0] ROM[127:0];
+  reg  [31:0] ROM[0:127];
 
     // added
     initial begin
