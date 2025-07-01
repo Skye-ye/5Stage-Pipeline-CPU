@@ -62,10 +62,10 @@ fi
 echo "Compiling with instruction file: ${INSTR_FILE}"
 
 # Compile with the specified instruction file
-iverilog -D INSTR_FILE=${INSTR_FILE} -o pipeline_cpu_sim.out \
-    ctrl_encode_def.v alu.v ctrl.v dm.v EXT.v im.v RF.v \
-    hazard_detection_unit.v forwarding_unit.v \
-    pipeline_cpu.v pipeline_sccomp.v pipeline_sccomp_tb.v
+iverilog -I cpu -D INSTR_FILE=${INSTR_FILE} -o pipeline_cpu_sim.out \
+    cpu/ctrl_encode_def.v cpu/alu.v cpu/ctrl.v cpu/dm.v cpu/EXT.v cpu/im.v cpu/RF.v \
+    cpu/hazard_detection_unit.v cpu/forwarding_unit.v \
+    cpu/pipeline_cpu.v cpu/pipeline_sccomp.v cpu/pipeline_sccomp_tb.v
 
 if [ $? -ne 0 ]; then
     echo "Compilation failed!"

@@ -1,7 +1,7 @@
 
 // instruction memory
 module im #(
-    parameter INSTR_FILE = "./instr/non_data_sim5.dat"
+    parameter INSTR_FILE = "../instr/non_data_sim5.dat"
 )(
     input  [8:2]  addr,
     output [31:0] dout 

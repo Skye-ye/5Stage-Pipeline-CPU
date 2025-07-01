@@ -85,18 +85,6 @@ module ctrl(Op, Funct7, Funct3, Zero,
     assign WDSel[0] = itype_l;   
     assign WDSel[1] = i_jal | i_jalr;    
 
-//aluop
-//ALUOp_nop 5'b00000
-//ALUOp_lui 5'b00001
-//ALUOp_auipc 5'b00010
-//ALUOp_add 5'b00011
-
-//assign ALUOp[0]= i_add  | i_addi | stype | itype_l ;
-//assign ALUOp[1]= i_add  | i_addi | stype | itype_l ;
-//assign ALUOp[2]= 1'b0;
-//assign ALUOp[3]= 1'b0;
-//assign ALUOp[4]= 1'b0;
-
 	assign ALUOp[0] = i_jal|i_jalr|itype_l|stype|i_addi|i_ori|i_add|i_or|i_bne|i_bge|i_bgeu|i_sltiu|i_sltu|i_slli|i_sll|i_sra|i_srai|i_lui;
 	assign ALUOp[1] = i_jal|i_jalr|itype_l|stype|i_addi|i_add|i_and|i_andi|i_auipc|i_blt|i_bge|i_slt|i_slti|i_sltiu|i_sltu|i_slli|i_sll;
 	assign ALUOp[2] = i_andi|i_and|i_ori|i_or|i_beq|i_sub|i_bne|i_blt|i_bge|i_xor|i_xori|i_sll|i_slli;//
@@ -111,13 +99,6 @@ module ctrl(Op, Funct7, Funct3, Zero,
     assign EXTOp[1] =  i_auipc | i_lui;
     assign EXTOp[2] =  sbtype;  // branch instruction
 
-// DataMem   
-// dm_word 3'b000
-// dm_halfword 3'b001
-// dm_halfword_unsigned 3'b010
-// dm_byte 3'b011
-// dm_byte_unsigned 3'b100
-// assign DMType[2]=i_lbu;
   assign DMType[0] = i_lb|i_lh|i_sb|i_sh;
   assign DMType[1] = i_lhu|i_lb|i_sb;
   assign DMType[2] = i_lbu;
