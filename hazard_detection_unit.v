@@ -53,18 +53,14 @@ module hazard_detection_unit(
                                 ((rd_EX == rs1_ID) || (rd_EX == rs2_ID));
 
     // JALR-load hazard detection (JALR depends on load result)
-    // Need to stall for TWO cycles: when load is in EX stage AND when load is in MEM stage
+    // Only need to stall when load is in EX stage, since MEM stage can forward directly
     wire jalr_load_hazard_EX;  // Load in EX stage
-    wire jalr_load_hazard_MEM; // Load in MEM stage
     wire jalr_load_hazard;
     
     assign jalr_load_hazard_EX = IsJALR_ID && MemRead_EX && RegWrite_EX && rd_EX != 0 &&
                                 (rd_EX == rs1_ID);
-                                
-    assign jalr_load_hazard_MEM = IsJALR_ID && MemRead_MEM && RegWrite_MEM && rd_MEM != 0 &&
-                                 (rd_MEM == rs1_ID);
                                  
-    assign jalr_load_hazard = jalr_load_hazard_EX || jalr_load_hazard_MEM;
+    assign jalr_load_hazard = jalr_load_hazard_EX;
 
     // JALR-arithmetic hazard detection (JALR depends on arithmetic result)  
     wire jalr_arith_hazard;

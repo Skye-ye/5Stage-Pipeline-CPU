@@ -168,7 +168,7 @@ module pipeline_cpu(
         case (forwardA_branch)
             2'b00: branch_A = RD1_ID;              // No forwarding
             2'b01: branch_A = WriteData_WB;        // Forward from WB stage
-            2'b10: branch_A = (EXMEM_WDSel == `WDSel_FromMEM) ? MEMWB_MemData : EXMEM_ALUOut;  // Forward from MEM stage (use loaded data, not raw memory input)
+            2'b10: branch_A = (EXMEM_WDSel == `WDSel_FromMEM) ? Data_in : EXMEM_ALUOut;  // Forward from MEM stage (use current memory data)
             2'b11: branch_A = ALUOut_EX;           // Forward from EX stage
             default: branch_A = RD1_ID;
         endcase
@@ -180,7 +180,7 @@ module pipeline_cpu(
         case (forwardB_branch)
             2'b00: branch_B = RD2_ID;              // No forwarding
             2'b01: branch_B = WriteData_WB;        // Forward from WB stage
-            2'b10: branch_B = (EXMEM_WDSel == `WDSel_FromMEM) ? MEMWB_MemData : EXMEM_ALUOut;  // Forward from MEM stage (use loaded data, not raw memory input)
+            2'b10: branch_B = (EXMEM_WDSel == `WDSel_FromMEM) ? Data_in : EXMEM_ALUOut;  // Forward from MEM stage (use current memory data)
             2'b11: branch_B = ALUOut_EX;           // Forward from EX stage
             default: branch_B = RD2_ID;
         endcase

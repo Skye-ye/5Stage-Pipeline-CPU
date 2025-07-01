@@ -1,4 +1,3 @@
-
 main:   addi    x5, x0, 0               #x5 <== 0x0,            00000293
         addi    x0, x0, 0               #                       00000013
         addi    x0, x0, 0 
@@ -15,8 +14,7 @@ main:   addi    x5, x0, 0               #x5 <== 0x0,            00000293
         addi    x0, x0, 0
         addi    x0, x0, 0
         jal     x0, end
-proc1:
-        addi    x0, x0, 0               #                                       0x3c
+proc1:  addi    x0, x0, 0               #                                       0x3c
         addi    x0, x0, 0               #                                       0x40
         addi    x0, x0, 0               #                                       0x44
         addi    x0, x0, 0               #                                       0x48
