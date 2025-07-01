@@ -8,6 +8,21 @@ module comp_tb();
     wire [31:0] reg_data;
     reg stop_monitoring = 0;
     
+    // ANSI Color Codes
+    parameter COLOR_RESET = "\033[0m";
+    parameter COLOR_RED = "\033[31m";
+    parameter COLOR_GREEN = "\033[32m";
+    parameter COLOR_YELLOW = "\033[33m";
+    parameter COLOR_BLUE = "\033[34m";
+    parameter COLOR_MAGENTA = "\033[35m";
+    parameter COLOR_CYAN = "\033[36m";
+    parameter COLOR_WHITE = "\033[37m";
+    parameter COLOR_BOLD = "\033[1m";
+    parameter COLOR_BOLD_GREEN = "\033[1;32m";
+    parameter COLOR_BOLD_RED = "\033[1;31m";
+    parameter COLOR_BOLD_YELLOW = "\033[1;33m";
+    parameter COLOR_BOLD_BLUE = "\033[1;34m";
+    
     // Instantiate the pipeline CPU
     comp #(
 `ifdef INSTR_FILE
@@ -39,12 +54,14 @@ module comp_tb();
         // Initialize
         rstn = 0;
         
-        $display("=== Pipeline CPU Simulation Started ===");
+        $display("%s%s=== Pipeline CPU Simulation Started ===%s", COLOR_BOLD_GREEN, COLOR_BOLD, COLOR_RESET);
         
         // Reset the system
-        #5;
+        #1;
         rstn = 1;
-        $display("Time: %10t: Reset released", $time);
+        #1;
+        rstn = 0;
+        $display("%sTime: %10t: Reset released%s", COLOR_GREEN, $time, COLOR_RESET);
         
         // Continue simulation to observe more pipeline behavior
         #500;
@@ -57,14 +74,14 @@ module comp_tb();
         @(posedge clk);
         
         // Now display final register state without interruption
-        $display("\n=== Final Register State ===");
+        $display("\n%s%s=== Final Register State ===%s", COLOR_BOLD_BLUE, COLOR_BOLD, COLOR_RESET);
         reg_sel = 0;
         repeat (32) begin
             #2;
             if (reg_sel < 10) begin
-                $write("x%0d  = 0x%08h", reg_sel, reg_data);  // Extra space for single digits
+                $write("%sx%0d  = 0x%08h%s", COLOR_CYAN, reg_sel, reg_data, COLOR_RESET);  // Extra space for single digits
             end else begin
-                $write("x%0d = 0x%08h", reg_sel, reg_data);   // Normal for double digits
+                $write("%sx%0d = 0x%08h%s", COLOR_CYAN, reg_sel, reg_data, COLOR_RESET);   // Normal for double digits
             end
             if ((reg_sel % 4) == 3) begin
                 $display("");  // New line after every 4 registers
@@ -74,39 +91,40 @@ module comp_tb();
             reg_sel = reg_sel + 1;
         end
         
-        $display("=== Pipeline CPU simulation completed successfully! ===");
+        $display("%s%s=== Pipeline CPU simulation completed successfully! ===%s", COLOR_BOLD_GREEN, COLOR_BOLD, COLOR_RESET);
         $finish;
     end
     
     // Monitor pipeline state with more detailed information
     always @(posedge clk) begin
-        if (rstn && !stop_monitoring) begin
-            $display("Cycle %10t: PC=0x%08h, Inst=0x%08h, Stall=%b, Branch=%b, ForwardA=%02b, ForwardB=%02b", 
-                     $time, 
-                     U_COMP.U_CPU.PC,
-                     U_COMP.U_CPU.IFID_inst,
-                     U_COMP.U_CPU.stall,
-                     U_COMP.U_CPU.BranchTaken,
-                     U_COMP.U_CPU.forwardA,
-                     U_COMP.U_CPU.forwardB);
+        if (!rstn && !stop_monitoring) begin
+            $display("%sCycle %10t%s: %sPC=0x%08h%s, %sInst=0x%08h%s, %sStall=%b%s,   %sBranch=%b%s,   %sForwardA=%02b%s,   %sForwardB=%02b%s", 
+                     COLOR_WHITE, $time, COLOR_RESET,
+                     COLOR_BLUE, U_COMP.U_CPU.PC, COLOR_RESET,
+                     COLOR_MAGENTA, U_COMP.U_CPU.IFID_inst, COLOR_RESET,
+                     U_COMP.U_CPU.stall ? COLOR_RED : COLOR_GREEN, U_COMP.U_CPU.stall, COLOR_RESET,
+                     U_COMP.U_CPU.BranchTaken ? COLOR_YELLOW : COLOR_GREEN, U_COMP.U_CPU.BranchTaken, COLOR_RESET,
+                     U_COMP.U_CPU.forwardA != 2'b00 ? COLOR_BLUE : COLOR_GREEN, U_COMP.U_CPU.forwardA, COLOR_RESET,
+                     U_COMP.U_CPU.forwardB != 2'b00 ? COLOR_BLUE : COLOR_GREEN, U_COMP.U_CPU.forwardB, COLOR_RESET);
         end
     end
     
     // Monitor hazard events
     always @(posedge clk) begin
-        if (rstn && !stop_monitoring) begin
+        if (!rstn && !stop_monitoring) begin
             if (U_COMP.U_CPU.stall) begin
-                $display("STALL %10t", $time);
+                $display("%s%sSTALL %10t%s", COLOR_BOLD_RED, COLOR_BOLD, $time, COLOR_RESET);
             end
             if (U_COMP.U_CPU.BranchTaken) begin
-                $display("BRANCH %9t: Target: 0x%08h", 
-                         $time, U_COMP.U_CPU.branch_target);
+                $display("%s%sBRANCH %9t%s: %sTarget: 0x%08h%s", 
+                         COLOR_BOLD_YELLOW, COLOR_BOLD, $time, COLOR_RESET,
+                         COLOR_YELLOW, U_COMP.U_CPU.branch_target, COLOR_RESET);
             end
             if (U_COMP.U_CPU.forwardA != 2'b00 || U_COMP.U_CPU.forwardB != 2'b00) begin
-                $display("FORWARD %8t: ForwardA=%02b, ForwardB=%02b", 
-                         $time, 
-                         U_COMP.U_CPU.forwardA,
-                         U_COMP.U_CPU.forwardB);
+                $display("%s%sFORWARD %8t%s: %sForwardA=%02b%s, %sForwardB=%02b%s", 
+                         COLOR_BOLD_BLUE, COLOR_BOLD, $time, COLOR_RESET,
+                         COLOR_BLUE, U_COMP.U_CPU.forwardA, COLOR_RESET,
+                         COLOR_BLUE, U_COMP.U_CPU.forwardB, COLOR_RESET);
             end
         end
     end

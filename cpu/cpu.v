@@ -88,8 +88,8 @@ module cpu(
     // ========== 1 IF Stage ==========
     
     // Program Counter Register
-    always @(posedge clk) begin
-        if (reset) begin
+    always @(posedge clk or negedge reset) begin
+        if (!reset) begin
             IF_PC <= `RESET_PC;
         end else if (!stall || BranchTaken) begin
             IF_PC <= NPC;
@@ -97,8 +97,8 @@ module cpu(
     end
     
     // IF/ID Pipeline Register
-    always @(posedge clk) begin
-        if (reset || flush_IFID) begin
+    always @(posedge clk or negedge reset) begin
+        if (!reset || flush_IFID) begin
             IFID_PC    <= `RESET_PC;
             IFID_PCPLUS4   <= `PC_INCREMENT;
             IFID_inst  <= `NOP_INSTRUCTION;
@@ -213,8 +213,8 @@ module cpu(
                                (IFID_PC + imm_ID);
 
     // ID/EX Pipeline Register
-    always @(posedge clk) begin
-        if (reset || flush_IDEX) begin
+    always @(posedge clk or negedge reset) begin
+        if (!reset || flush_IDEX) begin
             IDEX_PC <= 32'h00000000;
             IDEX_PCPLUS4 <= 32'h00000004;
             IDEX_RD1 <= 32'h00000000;
@@ -288,8 +288,8 @@ module cpu(
 
 
     // EX/MEM Pipeline Register
-    always @(posedge clk) begin
-        if (reset) begin
+    always @(posedge clk or negedge reset) begin
+        if (!reset) begin
             EXMEM_PCPLUS4 <= 32'h00000004;
             EXMEM_ALUOut <= 32'h00000000;
             EXMEM_RD2 <= 32'h00000000;
@@ -324,8 +324,8 @@ module cpu(
     assign mem_w = EXMEM_MemWrite & EXMEM_valid;
 
     // MEM/WB Pipeline Register
-    always @(posedge clk) begin
-        if (reset) begin
+    always @(posedge clk or negedge reset) begin
+        if (!reset) begin
             MEMWB_PCPLUS4 <= 32'h00000004;
             MEMWB_ALUOut <= 32'h00000000;
             MEMWB_MemData <= 32'h00000000;

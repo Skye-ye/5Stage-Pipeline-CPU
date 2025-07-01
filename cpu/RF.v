@@ -15,8 +15,8 @@ module rf(
     integer i;
 
     // ========== Register File Write Logic ==========
-    always @(posedge clk, posedge rst) begin
-        if (rst) begin
+    always @(posedge clk or negedge rst) begin
+        if (!rst) begin
             // Reset all registers except x0 (which is hardwired to 0)
             for (i = 1; i < 32; i = i + 1) begin
                 rf[i] <= 32'b0;
