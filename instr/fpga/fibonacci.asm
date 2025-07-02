@@ -1,3 +1,26 @@
+		lui		x31, 0xFFFF0
+		addi	x1, x0, -4
+main: 	lw		x6, 0x004(x31)
+		srli	x6, x6, 10
+		andi	x6, x6, 0x01F
+		jal		x5, fib
+		sw		x7, 0x00C(x31)
+		jal		x0, main
+fib:	addi	x7, x0, 1
+		bge		x7, x6, end
+		addi	x1, x1, -8
+		sw		x5, 4(x1)
+		addi	x6, x6, -1
+		jal		x5, fib
+		sw		x7, 0(x1)
+		addi	x6, x6, -1
+		jal		x5, fib
+		lw		x8, 0(x1)
+		add		x7, x7, x8
+		addi	x6, x6, 2
+		lw		x5, 4(x1)
+		addi	x1, x1, 8
+end:	jalr	x0, x5, 0
 #################################################
 #	x1		stack pointer
 #	x5		return addr
@@ -26,31 +49,3 @@
 #################################################
 
 
-	lui		x31, 0xFFFF0
-	addi	x1, x0, -4
-
-main:
-	lw		x6, 0x004(x31)
-	srli	x6, x6, 10
-	andi	x6, x6, 0x01F
-	jal		x5, fib
-	sw		x7, 0x00C(x31)
-	jal		x0, main
-
-fib:
-	addi	x7, x0, 1
-	bge		x7, x6, ret
-	addi	x1, x1, -8
-	sw		x5, 4(x1)
-	addi	x6, x6, -1
-	jal		x5, fib
-	sw		x7, 0(x1)
-	addi	x6, x6, -1
-	jal		x5, fib
-	lw		x8, 0(x1)
-	add		x7, x7, x8
-	addi	x6, x6, 2
-	lw		x5, 4(x1)
-	addi	x1, x1, 8
-ret:
-	jalr	x0, x5, 0

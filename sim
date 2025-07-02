@@ -10,31 +10,31 @@
 
 # Default values
 DEFAULT_DIR="non_forwarding"
-DEFAULT_SIM=5
+DEFAULT_SIM="sim5"
 
 # Parse command line arguments
 if [ $# -eq 0 ]; then
     DIR=$DEFAULT_DIR
-    SIM_NUM=$DEFAULT_SIM
-    echo "No arguments specified. Using default: instr/${DIR}/sim${SIM_NUM}.dat"
+    SIM=$DEFAULT_SIM
+    echo "No arguments specified. Using default: instr/${DIR}/${SIM}.dat"
 elif [ $# -eq 1 ]; then
     # Check if argument is a number (sim file) or directory name
     case $1 in
         ''|*[!0-9]*) 
             DIR=$1
-            SIM_NUM=$DEFAULT_SIM
-            echo "Using instruction file: instr/${DIR}/sim${SIM_NUM}.dat"
+            SIM=$DEFAULT_SIM
+            echo "Using instruction file: instr/${DIR}/${SIM}.dat"
             ;;
         *) 
             DIR=$DEFAULT_DIR
-            SIM_NUM=$1
-            echo "Using instruction file: instr/${DIR}/sim${SIM_NUM}.dat"
+            SIM=$1
+            echo "Using instruction file: instr/${DIR}/${SIM}.dat"
             ;;
     esac
 elif [ $# -eq 2 ]; then
     DIR=$1
-    SIM_NUM=$2
-    echo "Using instruction file: instr/${DIR}/sim${SIM_NUM}.dat"
+    SIM=$2
+    echo "Using instruction file: instr/${DIR}/${SIM}.dat"
 else
     echo "Usage: $0 [directory] [sim_number]"
     echo "Available directories:"
@@ -45,11 +45,11 @@ else
 fi
 
 # Set the instruction file path
-INSTR_FILE="\"./instr/${DIR}/sim${SIM_NUM}.dat\""
+INSTR_FILE="\"./instr/${DIR}/${SIM}.dat\""
 
 # Check if the instruction file exists
-if [ ! -f "./instr/${DIR}/sim${SIM_NUM}.dat" ]; then
-    echo "Error: Instruction file instr/${DIR}/sim${SIM_NUM}.dat not found!"
+if [ ! -f "./instr/${DIR}/${SIM}.dat" ]; then
+    echo "Error: Instruction file instr/${DIR}/${SIM}.dat not found!"
     echo ""
     echo "Available directories:"
     ls -1 instr/ | grep -v '\.'
@@ -75,4 +75,4 @@ echo "Running simulation..."
 vvp cpu_sim.out
 
 echo "Simulation complete!"
-echo "VCD file: pipeline_cpu.vcd"
+echo "VCD file: cpu.vcd"

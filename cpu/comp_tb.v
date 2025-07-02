@@ -7,12 +7,14 @@ module comp_tb();
     reg [4:0] reg_sel;
     wire [31:0] reg_data;
     reg stop_monitoring = 0;
+    reg [31:0] cycle = 0;
     
     // ANSI Color Codes
     parameter COLOR_RESET = "\033[0m";
     parameter COLOR_RED = "\033[31m";
     parameter COLOR_GREEN = "\033[32m";
     parameter COLOR_YELLOW = "\033[33m";
+    parameter COLOR_PURPLE = "\033[35m";
     parameter COLOR_BLUE = "\033[34m";
     parameter COLOR_MAGENTA = "\033[35m";
     parameter COLOR_CYAN = "\033[36m";
@@ -39,8 +41,17 @@ module comp_tb();
     
     // Clock generation
     initial begin
-        clk = 0;
+        clk = 1;
         forever #5 clk = ~clk; // 10ns period, 100MHz
+    end
+    
+    // Cycle counter
+    always @(posedge clk) begin
+        if (rstn) begin
+            cycle <= 0;
+        end else begin
+            cycle <= cycle + 1;
+        end
     end
     
     // VCD dump for GTKWave
@@ -52,16 +63,14 @@ module comp_tb();
     // Test sequence
     initial begin
         // Initialize
-        rstn = 0;
+        rstn = 1;
         
         $display("%s%s=== Pipeline CPU Simulation Started ===%s", COLOR_BOLD_GREEN, COLOR_BOLD, COLOR_RESET);
         
         // Reset the system
         #1;
-        rstn = 1;
-        #1;
         rstn = 0;
-        $display("%sTime: %10t: Reset released%s", COLOR_GREEN, $time, COLOR_RESET);
+        $display("%sCycle: %6d: Reset released%s", COLOR_GREEN, cycle, COLOR_RESET);
         
         // Continue simulation to observe more pipeline behavior
         #500;
@@ -98,14 +107,16 @@ module comp_tb();
     // Monitor pipeline state with more detailed information
     always @(posedge clk) begin
         if (!rstn && !stop_monitoring) begin
-            $display("%sCycle %10t%s: %sPC=0x%08h%s, %sInst=0x%08h%s, %sStall=%b%s,   %sBranch=%b%s,   %sForwardA=%02b%s,   %sForwardB=%02b%s", 
-                     COLOR_WHITE, $time, COLOR_RESET,
+            $display("%sCycle %7d%s: %sPC=0x%08h%s, %sInst=0x%08h%s, %sStall=%b%s,   %sBranch=%b%s,   %sForwardA=%02b%s,   %sForwardB=%02b%s,   %sFlush_IF/ID=%b%s,   %sFlush_ID/EX=%b%s", 
+                     COLOR_WHITE, cycle, COLOR_RESET,
                      COLOR_BLUE, U_COMP.U_CPU.PC, COLOR_RESET,
                      COLOR_MAGENTA, U_COMP.U_CPU.IFID_inst, COLOR_RESET,
                      U_COMP.U_CPU.stall ? COLOR_RED : COLOR_GREEN, U_COMP.U_CPU.stall, COLOR_RESET,
                      U_COMP.U_CPU.BranchTaken ? COLOR_YELLOW : COLOR_GREEN, U_COMP.U_CPU.BranchTaken, COLOR_RESET,
                      U_COMP.U_CPU.forwardA != 2'b00 ? COLOR_BLUE : COLOR_GREEN, U_COMP.U_CPU.forwardA, COLOR_RESET,
-                     U_COMP.U_CPU.forwardB != 2'b00 ? COLOR_BLUE : COLOR_GREEN, U_COMP.U_CPU.forwardB, COLOR_RESET);
+                     U_COMP.U_CPU.forwardB != 2'b00 ? COLOR_BLUE : COLOR_GREEN, U_COMP.U_CPU.forwardB, COLOR_RESET,
+                     U_COMP.U_CPU.flush_IFID ? COLOR_PURPLE : COLOR_GREEN, U_COMP.U_CPU.flush_IFID, COLOR_RESET,
+                     U_COMP.U_CPU.flush_IDEX ? COLOR_PURPLE : COLOR_GREEN, U_COMP.U_CPU.flush_IDEX, COLOR_RESET);
         end
     end
     
@@ -113,18 +124,24 @@ module comp_tb();
     always @(posedge clk) begin
         if (!rstn && !stop_monitoring) begin
             if (U_COMP.U_CPU.stall) begin
-                $display("%s%sSTALL %10t%s", COLOR_BOLD_RED, COLOR_BOLD, $time, COLOR_RESET);
+                $display("%s%sSTALL %7d%s", COLOR_BOLD_RED, COLOR_BOLD, cycle, COLOR_RESET);
             end
             if (U_COMP.U_CPU.BranchTaken) begin
-                $display("%s%sBRANCH %9t%s: %sTarget: 0x%08h%s", 
-                         COLOR_BOLD_YELLOW, COLOR_BOLD, $time, COLOR_RESET,
+                $display("%s%sBRANCH %6d%s: %sTarget: 0x%08h%s", 
+                         COLOR_BOLD_YELLOW, COLOR_BOLD, cycle, COLOR_RESET,
                          COLOR_YELLOW, U_COMP.U_CPU.branch_target, COLOR_RESET);
             end
             if (U_COMP.U_CPU.forwardA != 2'b00 || U_COMP.U_CPU.forwardB != 2'b00) begin
-                $display("%s%sFORWARD %8t%s: %sForwardA=%02b%s, %sForwardB=%02b%s", 
-                         COLOR_BOLD_BLUE, COLOR_BOLD, $time, COLOR_RESET,
+                $display("%s%sFORWARD %5d%s: %sForwardA=%02b%s, %sForwardB=%02b%s", 
+                         COLOR_BOLD_BLUE, COLOR_BOLD, cycle, COLOR_RESET,
                          COLOR_BLUE, U_COMP.U_CPU.forwardA, COLOR_RESET,
                          COLOR_BLUE, U_COMP.U_CPU.forwardB, COLOR_RESET);
+            end
+            if (U_COMP.U_CPU.flush_IFID || U_COMP.U_CPU.flush_IDEX) begin
+                $display("%s%sFLUSH  %6d%s: %sFlush_IF/ID=%b%s, %sFlush_ID/EX=%b%s", 
+                         COLOR_PURPLE, COLOR_BOLD, cycle, COLOR_RESET,
+                         COLOR_PURPLE, U_COMP.U_CPU.flush_IFID, COLOR_RESET,
+                         COLOR_PURPLE, U_COMP.U_CPU.flush_IDEX, COLOR_RESET);
             end
         end
     end
