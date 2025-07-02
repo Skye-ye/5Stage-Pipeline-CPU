@@ -12,13 +12,15 @@ module IP2SOC_Top(
   wire [31:0]   PC;
   wire          MemWrite;
   wire [31:0]   dm_din, dm_dout;
+  wire [2:0]    DMType;              // data memory type from CPU
 
   wire          rst;
   assign rst = ~rstn;
 
   wire [31:0]   seg7_data; 
   wire [6:0]    ram_addr;
-  wire [3:0]    cpu_data_amp, ram_amp;
+  reg  [3:0]    cpu_data_amp;           // declared as reg for always block
+  wire [3:0]    ram_amp;
   wire          ram_we;
   wire          seg7_we;
 
@@ -28,9 +30,27 @@ module IP2SOC_Top(
   wire [31:0]   cpu_data_in;
   wire [31:0]   cpuseg7_data;
   wire [31:0]   reg_data;
+  
+  // Register selection for debug display
+  wire [4:0]    reg_sel;
+  assign reg_sel = sw_i[4:0];       // Use switches to select register
+  
+  // Convert DMType to cpu_data_amp format
+  always @(*) begin
+    case (DMType)
+      3'b000: cpu_data_amp = 4'b1111;  // dm_word - all bytes
+      3'b001: cpu_data_amp = 4'b0011;  // dm_halfword - lower 2 bytes
+      3'b010: cpu_data_amp = 4'b0011;  // dm_halfword_unsigned - lower 2 bytes
+      3'b011: cpu_data_amp = 4'b0001;  // dm_byte - lowest byte
+      3'b100: cpu_data_amp = 4'b0001;  // dm_byte_unsigned - lowest byte
+      default: cpu_data_amp = 4'b1111; // default to word access
+    endcase
+  end
    
 
-  imem  U_IM( // instruction memory
+  // Use block RAM for instruction memory on FPGA
+  // Note: You'll need to initialize this with your program
+  imem  U_IM( // instruction memory  
     .a(PC[8:2]), .spo(instr)
     );
 
@@ -64,29 +84,30 @@ module IP2SOC_Top(
     .rst(rst),
     .EN(seg7_we),                //Write EN
     .ctrl(sw_i[5:0]),            //SW[5:0]
-    .Data0(cpuseg7_data),
-     //disp_cpudata
-    .data1({2'b0,PC[31:2]}),
-    .data2(PC),
-    .data3(instr),
-    .data4(cpu_data_addr),
-    .data5(cpu_data_out),
-    .data6(dm_dout),
-    .data7({ram_addr, 2'b00}),
-    .reg_data(reg_data),
+    .Data0(cpuseg7_data),        //disp_cpudata from memory-mapped I/O
+    .data1({2'b0,PC[31:2]}),     //PC shifted
+    .data2(PC),                  //Full PC
+    .data3(instr),               //Current instruction
+    .data4(cpu_data_addr),       //Data memory address
+    .data5(cpu_data_out),        //Data to memory
+    .data6(dm_dout),             //Data from memory
+    .data7({ram_addr, 2'b00}),   //RAM address
+    .reg_data(reg_data),         //Selected register data (controlled by SW[4:0])
     .seg7_data(seg7_data)
     );
 
-   xgriscv  U_xgriscv(
-    .clk(Clk_CPU), 
-    .reset(rst), 
-    .pcF(PC), 
-    .instr(instr), 
-    .memwrite(MemWrite), 
-    .amp(cpu_data_amp), 
-    .daddr(cpu_data_addr), 
-    .writedata(cpu_data_out), 
-    .readdata(cpu_data_in)
+   cpu U_CPU(
+    .clk(Clk_CPU),
+    .reset(rst),
+    .inst_in(instr),
+    .Data_in(cpu_data_in),
+    .mem_w(MemWrite),
+    .DMType_out(DMType),
+    .PC(PC),
+    .Addr_out(cpu_data_addr),
+    .Data_out(cpu_data_out),
+    .reg_sel(reg_sel),
+    .reg_data(reg_data)
     );         
          
   SEG7x16 U_7SEG(
