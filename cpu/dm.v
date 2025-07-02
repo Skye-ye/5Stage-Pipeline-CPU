@@ -20,14 +20,14 @@ module dm(clk, DMWr, addr, din, dout, DMType);
          case (DMType)
             3'b000: begin // dm_word - store word
                dmem[word_addr] <= din;
-               $display("SW                dmem[0x%8X] = 0x%8X", addr << 2, din); 
+               $display("SW             dmem[0x%8X] = 0x%8X", addr, din); 
             end
             3'b001: begin // dm_halfword - store halfword
                case (byte_offset[1])
                   1'b0: dmem[word_addr][15:0]  <= din[15:0];   // Lower halfword
                   1'b1: dmem[word_addr][31:16] <= din[15:0];   // Upper halfword
                endcase
-               $display("SH                dmem[0x%8X] halfword = 0x%4X", addr << 2, din[15:0]); 
+               $display("SH             dmem[0x%8X] halfword = 0x%4X", addr, din[15:0]); 
             end
             3'b011: begin // dm_byte - store byte
                case (byte_offset)
@@ -36,7 +36,7 @@ module dm(clk, DMWr, addr, din, dout, DMType);
                   2'b10: dmem[word_addr][23:16] <= din[7:0];   // Byte 2
                   2'b11: dmem[word_addr][31:24] <= din[7:0];   // Byte 3
                endcase
-               $display("SB                dmem[0x%8X] byte = 0x%2X", addr << 2, din[7:0]); 
+               $display("SB             dmem[0x%8X] byte = 0x%2X", addr, din[7:0]); 
             end
             default: begin
                dmem[word_addr] <= din; // Default to word operation

@@ -52,11 +52,6 @@ module hazard(
                                    
     wire branch_load_hazard = branch_load_hazard_EX || branch_load_hazard_MEM;
 
-    // Branch-arithmetic hazard detection
-    wire branch_arith_hazard = IsBranch_ID && !MemRead_EX &&
-                              (check_dependency(rd_EX, rs1_ID, RegWrite_EX) || 
-                               check_dependency(rd_EX, rs2_ID, RegWrite_EX));
-
     // JALR hazard detection (only depends on rs1)
     wire jalr_load_hazard = IsJALR_ID && MemRead_EX && 
                            check_dependency(rd_EX, rs1_ID, RegWrite_EX);
@@ -83,12 +78,6 @@ module hazard(
         if (branch_load_hazard) begin
             stall      = 1'b1;   // Stall IF and ID stages
             flush_IDEX = 1'b1;   // Insert bubble in EX stage
-        end
-        
-        // Branch depends on arithmetic result - stall but allow forwarding
-        if (branch_arith_hazard) begin
-            stall = 1'b1;        // Stall IF and ID stages
-            // No flush - allow EX stage to advance for forwarding
         end
         
         // ========== JALR Hazards ==========

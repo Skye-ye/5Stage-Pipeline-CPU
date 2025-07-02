@@ -73,7 +73,7 @@ module comp_tb();
         $display("%sCycle: %6d: Reset released%s", COLOR_GREEN, cycle, COLOR_RESET);
         
         // Continue simulation to observe more pipeline behavior
-        #500;
+        #6000;
         
         // Stop the clock monitoring to avoid interleaving
         stop_monitoring = 1;
@@ -110,7 +110,7 @@ module comp_tb();
             $display("%sCycle %7d%s: %sPC=0x%08h%s, %sInst=0x%08h%s, %sStall=%b%s,   %sBranch=%b%s,   %sForwardA=%02b%s,   %sForwardB=%02b%s,   %sFlush_IF/ID=%b%s,   %sFlush_ID/EX=%b%s", 
                      COLOR_WHITE, cycle, COLOR_RESET,
                      COLOR_BLUE, U_COMP.U_CPU.PC, COLOR_RESET,
-                     COLOR_MAGENTA, U_COMP.U_CPU.IFID_inst, COLOR_RESET,
+                     COLOR_MAGENTA, U_COMP.U_CPU.inst_in, COLOR_RESET,
                      U_COMP.U_CPU.stall ? COLOR_RED : COLOR_GREEN, U_COMP.U_CPU.stall, COLOR_RESET,
                      U_COMP.U_CPU.BranchTaken ? COLOR_YELLOW : COLOR_GREEN, U_COMP.U_CPU.BranchTaken, COLOR_RESET,
                      U_COMP.U_CPU.forwardA != 2'b00 ? COLOR_BLUE : COLOR_GREEN, U_COMP.U_CPU.forwardA, COLOR_RESET,
