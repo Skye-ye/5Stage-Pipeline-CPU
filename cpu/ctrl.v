@@ -84,15 +84,15 @@ module ctrl(
 
     // ALU operation encoding (5-bit operation code)
     assign ALUOp[0] = i_jal | i_jalr | itype_l | stype | i_addi | i_ori | i_add | i_or |
-                      i_bne | i_bge | i_bgeu | i_sltiu | i_sltu | i_slli | i_sll | i_sra | i_srai | i_lui;
+                      | i_sltiu | i_sltu | i_slli | i_sll | i_sra | i_srai | i_lui;
                       
     assign ALUOp[1] = i_jal | i_jalr | itype_l | stype | i_addi | i_add | i_and | i_andi |
-                      i_auipc | i_blt | i_bge | i_slt | i_slti | i_sltiu | i_sltu | i_slli | i_sll;
+                      i_auipc | i_slt | i_slti | i_sltiu | i_sltu | i_slli | i_sll;
                       
-    assign ALUOp[2] = i_andi | i_and | i_ori | i_or | i_beq | i_sub | i_bne | i_blt |
-                      i_bge | i_xor | i_xori | i_sll | i_slli;
+    assign ALUOp[2] = i_andi | i_and | i_ori | i_or | i_sub | i_xor | i_xori 
+                      | i_sll | i_slli;
                       
-    assign ALUOp[3] = i_andi | i_and | i_ori | i_or | i_bltu | i_bgeu | i_slt | i_slti |
+    assign ALUOp[3] = i_andi | i_and | i_ori | i_or | i_slt | i_slti |
                       i_sltiu | i_sltu | i_xor | i_xori | i_sll | i_slli;
                       
     assign ALUOp[4] = i_srl | i_sra | i_srli | i_srai;

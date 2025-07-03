@@ -17,11 +17,6 @@ module alu(
             `ALUOp_auipc: C = PC + B;                                     // Add upper immediate to PC
             `ALUOp_add:   C = A + B;                                      // Addition
             `ALUOp_sub:   C = A - B;                                      // Subtraction
-            `ALUOp_bne:   C = {31'b0, (A == B)};                        // Branch equal comparison
-            `ALUOp_blt:   C = {31'b0, (A >= B)};                        // Branch less than comparison
-            `ALUOp_bge:   C = {31'b0, (A < B)};                         // Branch greater equal comparison
-            `ALUOp_bltu:  C = {31'b0, ($unsigned(A) >= $unsigned(B))};  // Branch less than unsigned
-            `ALUOp_bgeu:  C = {31'b0, ($unsigned(A) < $unsigned(B))};   // Branch greater equal unsigned
             `ALUOp_slt:   C = {31'b0, (A < B)};                         // Set less than
             `ALUOp_sltu:  C = {31'b0, ($unsigned(A) < $unsigned(B))};   // Set less than unsigned
             `ALUOp_xor:   C = A ^ B;                                     // Bitwise XOR

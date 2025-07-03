@@ -1,4 +1,4 @@
-set bitfile "fib.bit"
+set bitfile "bitstream/collatz.bit"
 
 open_hw_manager
 connect_hw_server -allow_non_jtag
