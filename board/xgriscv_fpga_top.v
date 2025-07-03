@@ -105,7 +105,7 @@ module xgriscv_fpga_top(
     // 5-Stage Pipelined RISC-V CPU
     cpu U_CPU(
         .clk        (Clk_CPU),       // CPU clock
-        .reset      (rst),           // Reset (active high)
+        .reset      (rst),          // Reset (active low)
         .inst_in    (instr),         // Instruction input
         .Data_in    (cpu_data_in),   // Data input from memory system
         .mem_w      (mem_w),         // Memory write enable output
