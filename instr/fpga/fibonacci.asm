@@ -1,6 +1,6 @@
 		lui		x31, 0xFFFF0
 		addi	x1, x0, -4
-main: 	lw		x6, 0x004(x31)
+main:	lw		x6, 0x004(x31)
 		srli	x6, x6, 10
 		andi	x6, x6, 0x01F
 		jal		x5, fib

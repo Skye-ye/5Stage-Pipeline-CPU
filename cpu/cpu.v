@@ -67,7 +67,7 @@ module cpu(
     
     // Data Path Signals
     reg  [31:0] IF_PC;                    // Program Counter
-    wire [31:0] IF_PCPLUS4, NPC;              // PC+4 and Next PC
+    wire [31:0] IF_PCPLUS4, NPC;          // PC+4 and Next PC
     wire [31:0] RD1_ID, RD2_ID, imm_ID;   // Register data and immediate
     wire [4:0]  rs1_ID, rs2_ID, rd_ID;    // Register addresses
     wire [31:0] ALU_B, ALUOut_EX;         // ALU inputs and output
@@ -99,14 +99,14 @@ module cpu(
     // IF/ID Pipeline Register
     always @(posedge clk or posedge reset) begin
         if (reset || flush_IFID) begin
-            IFID_PC    <= `RESET_PC;
-            IFID_PCPLUS4   <= `PC_INCREMENT;
-            IFID_inst  <= `NOP_INSTRUCTION;
+            IFID_PC <= `RESET_PC;
+            IFID_PCPLUS4 <= `PC_INCREMENT;
+            IFID_inst <= `NOP_INSTRUCTION;
             IFID_valid <= 1'b0;
         end else if (!stall) begin
-            IFID_PC    <= IF_PC;
-            IFID_PCPLUS4   <= IF_PCPLUS4;
-            IFID_inst  <= inst_in;
+            IFID_PC <= IF_PC;
+            IFID_PCPLUS4 <= IF_PCPLUS4;
+            IFID_inst <= inst_in;
             IFID_valid <= 1'b1;
         end
     end

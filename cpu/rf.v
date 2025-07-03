@@ -11,8 +11,8 @@ module rf(
 
     integer i;
 
-    always @(negedge clk or negedge rst) begin
-        if (!rst) begin
+    always @(negedge clk or posedge rst) begin
+        if (rst) begin
             for (i=1; i<32; i=i+1)
                 rf[i] <= 0;
         end
