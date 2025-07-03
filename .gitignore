@@ -2,3 +2,5 @@
 *.out
 CLAUDE.md
 /.claude
+vivado*
+/.Xil

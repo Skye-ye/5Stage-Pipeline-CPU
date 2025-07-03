@@ -51,7 +51,7 @@ dispstuno:          lw      x3, 0(x0) 			#  load the orginal student no.
 displayseg7label:   sw      x3,  0(x2) 			#  output to seg7                                                                       
                     jal     x0, display                                                                                                  
 swap: 	            addi    x5, x0, 0x0f                                                                                                
-                    slli 	x10, x12, 2         #  4 * bestj                                                                           
+                    slli    x10, x12, 2         #  4 * bestj                                                                           
                     sll 	x5, x5, x10         #  mask1 = mask (4 * bestj)                                                              
                     or      x6, x4, x5          #  mask2 = mask0 | mask1                                                               
                     xori    x6, x6, -1          #  mask2 = ~mask2                                                                       
