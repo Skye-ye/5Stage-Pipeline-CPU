@@ -36,7 +36,7 @@ set cpu_files [list \
 ]
 
 set constraint_file "board/Nexys4DDR_CPU.xdc"
-set coe_file "instr/fpga/riscv-studentnosorting.coe"
+set coe_file "instr/fpga/collatz.coe"
 
 # ========================================
 # CREATE PROJECT
