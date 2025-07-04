@@ -87,11 +87,12 @@ module hazard(
             flush_IDEX = 1'b1;   // Insert bubble in EX stage
         end
         
-        // JALR depends on arithmetic result
-        if (jalr_arith_hazard) begin
-            stall = 1'b1;        // Stall IF and ID stages
-            // No flush - allow EX stage to advance for forwarding
-        end
+        // JALR depends on arithmetic result - can be resolved by EX-to-ID forwarding
+        // No stall needed since forwarding unit handles this dependency
+        // if (jalr_arith_hazard) begin
+        //     stall = 1'b1;        // Stall IF and ID stages
+        //     // No flush - allow EX stage to advance for forwarding
+        // end
         
         // ========== Control Hazard ==========
         // Branch taken - flush incorrectly fetched instruction
