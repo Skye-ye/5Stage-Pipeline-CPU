@@ -47,7 +47,7 @@ module comp_tb();
     
     // Cycle counter
     always @(posedge clk) begin
-        if (rstn) begin
+        if (~rstn) begin
             cycle <= 0;
         end else begin
             cycle <= cycle + 1;
@@ -62,18 +62,18 @@ module comp_tb();
     
     // Test sequence
     initial begin
-        // Initialize
-        rstn = 1;
+        // Initialize - rstn=0 means reset active (since rst = ~rstn in comp.v)
+        rstn = 0;
         
         $display("%s%s=== Pipeline CPU Simulation Started ===%s", COLOR_BOLD_GREEN, COLOR_BOLD, COLOR_RESET);
         
-        // Reset the system
+        // Release reset after a few cycles
         #1;
-        rstn = 0;
+        rstn = 1;
         $display("%sCycle: %6d: Reset released%s", COLOR_GREEN, cycle, COLOR_RESET);
         
         // Continue simulation to observe more pipeline behavior
-        #6000;
+        #1000;
         
         // Stop the clock monitoring to avoid interleaving
         stop_monitoring = 1;
@@ -106,7 +106,7 @@ module comp_tb();
     
     // Monitor pipeline state with more detailed information
     always @(posedge clk) begin
-        if (!rstn && !stop_monitoring) begin
+        if (rstn && !stop_monitoring) begin
             $display("%sCycle %7d%s: %sPC=0x%08h%s, %sInst=0x%08h%s, %sStall=%b%s,   %sBranch=%b%s,   %sForwardA=%02b%s,   %sForwardB=%02b%s,   %sFlush_IF/ID=%b%s,   %sFlush_ID/EX=%b%s", 
                      COLOR_WHITE, cycle, COLOR_RESET,
                      COLOR_BLUE, U_COMP.U_CPU.PC_out, COLOR_RESET,
@@ -122,7 +122,7 @@ module comp_tb();
     
     // Monitor hazard events
     always @(posedge clk) begin
-        if (!rstn && !stop_monitoring) begin
+        if (rstn && !stop_monitoring) begin
             if (U_COMP.U_CPU.stall) begin
                 $display("%s%sSTALL %7d%s", COLOR_BOLD_RED, COLOR_BOLD, cycle, COLOR_RESET);
             end

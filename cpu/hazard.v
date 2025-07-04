@@ -99,7 +99,7 @@ module hazard(
         else begin
             branch_taken = (IsBranch_ID & !branch_load_hazard & branch_result) 
                          | IsJAL_ID
-                         | (IsJALR_ID & !jalr_load_hazard & branch_result);
+                         | (IsJALR_ID & !jalr_load_hazard);
 
             // ========== Load-Use Hazard ==========
             // Stall for load-use dependencies
