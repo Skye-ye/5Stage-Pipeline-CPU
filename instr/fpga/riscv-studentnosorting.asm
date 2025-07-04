@@ -1,10 +1,10 @@
-                    addi 	x2, x0, 0x87		# This is the BCD encoding for the studnet no: a hex digit for each decimal digit
+                    addi 	x2, x0, 0x02		# This is the BCD encoding for the studnet no: a hex digit for each decimal digit
                     slli 	x2, x2, 8
-                    addi 	x2, x2, 0x65
+                    addi 	x2, x2, 0x11
                     slli 	x2, x2, 16
-                    addi 	x3, x0, 0x43
+                    addi 	x3, x0, 0x13
                     slli 	x3, x3, 8
-                    addi 	x3, x3, 0x21
+                    addi 	x3, x3, 0x69
                     add	 	x2, x2, x3			# set the student no.
                     sw 		x2, 0(x0)           # store the original stuno at data memory
                     addi    x11, x0, 8          # the size of stuno, N = 8
