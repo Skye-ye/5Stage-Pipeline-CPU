@@ -106,11 +106,11 @@ module xgriscv_fpga_top(
     cpu U_CPU(
         .clk        (Clk_CPU),       // CPU clock
         .reset      (rst),          // Reset (active low)
-        .inst_in    (instr),         // Instruction input
+        .Inst_in    (instr),         // Instruction input
         .Data_in    (cpu_data_in),   // Data input from memory system
         .mem_w      (mem_w),         // Memory write enable output
         .DMType_out (DMType),        // Data memory access type output
-        .PC         (PC),            // Program counter output
+        .PC_out     (PC),            // Program counter output
         .Addr_out   (cpu_data_addr), // Address output
         .Data_out   (cpu_data_out),  // Data output
         .reg_sel    (reg_sel),       // Register select for debug

@@ -8,10 +8,19 @@ module ctrl(
     output       MemWrite, // control signal for memory write
     output [5:0] EXTOp,    // control signal for immediate extension
     output [4:0] ALUOp,    // ALU operation code
-    output [2:0] NPCOp,    // next PC operation
     output       ALUSrc,   // ALU source selection
     output [2:0] DMType,   // data memory access type
-    output [1:0] WDSel     // write data selection
+    output [1:0] WDSel,    // write data selection
+    output       IsBranch, // branch instruction indicator
+    output       IsJAL,    // JAL instruction indicator
+    output       IsJALR,   // JALR instruction indicator
+    
+    // CSR instruction support
+    output       CSRWrite, // CSR write enable
+    output       CSRRead,  // CSR read enable
+    output [2:0] CSROp,    // CSR operation
+    output       IsCSR,    // CSR instruction indicator
+    output       IsMRET    // MRET instruction indicator
 );
    
     // ========== Instruction Format Detection ==========
@@ -24,6 +33,7 @@ module ctrl(
     wire i_jalr  = (Op == 7'b1100111);  // I-type: jump and link register
     wire i_auipc = (Op == 7'b0010111);  // U-type: add upper immediate to PC
     wire i_lui   = (Op == 7'b0110111);  // U-type: load upper immediate
+    wire csrtype = (Op == `CSR_OPCODE);  // CSR instructions
     
     // ========== R-type Instructions ==========
     wire i_add  = rtype & (Funct7 == 7'b0000000) & (Funct3 == 3'b000);  // ADD
@@ -67,10 +77,20 @@ module ctrl(
     wire i_bge  = sbtype & (Funct3 == 3'b101);  // BGE - branch if greater or equal
     wire i_bltu = sbtype & (Funct3 == 3'b110);  // BLTU - branch if less than unsigned
     wire i_bgeu = sbtype & (Funct3 == 3'b111);  // BGEU - branch if greater or equal unsigned
+    
+    // ========== CSR Instructions ==========
+    wire i_csrrw  = csrtype & (Funct3 == `CSR_CSRRW);   // CSRRW - CSR read/write
+    wire i_csrrs  = csrtype & (Funct3 == `CSR_CSRRS);   // CSRRS - CSR read/set
+    wire i_csrrc  = csrtype & (Funct3 == `CSR_CSRRC);   // CSRRC - CSR read/clear
+    wire i_csrrwi = csrtype & (Funct3 == `CSR_CSRRWI);  // CSRRWI - CSR read/write immediate
+    wire i_csrrsi = csrtype & (Funct3 == `CSR_CSRRSI);  // CSRRSI - CSR read/set immediate
+    wire i_csrrci = csrtype & (Funct3 == `CSR_CSRRCI);  // CSRRCI - CSR read/clear immediate
+    wire i_mret   = csrtype & (Funct3 == 3'b000) & (Funct7 == 7'b0011000); // MRET
 
     // ========== Control Signal Generation ==========
     // Register write enable
-    assign RegWrite = rtype | itype_l | itype_r | i_jalr | i_jal | i_lui | i_auipc;
+    assign RegWrite = rtype | itype_l | itype_r | i_jalr | i_jal | i_lui | i_auipc | 
+                      (csrtype & !i_mret); // CSR instructions write to register (except MRET)
     
     // Memory write enable
     assign MemWrite = stype;
@@ -78,9 +98,9 @@ module ctrl(
     // ALU source selection (0: register, 1: immediate)
     assign ALUSrc = itype_l | itype_r | stype | i_jal | i_jalr | i_auipc | i_lui;
     
-    // Write data selection (00: ALU, 01: Memory, 10: PC+4)
-    assign WDSel[0] = itype_l;                // Memory data
-    assign WDSel[1] = i_jal | i_jalr;         // PC+4 for jumps    
+    // Write data selection (00: ALU, 01: Memory, 10: PC+4, 11: CSR)
+    assign WDSel[0] = itype_l | csrtype;      // Memory data or CSR data
+    assign WDSel[1] = i_jal | i_jalr | csrtype; // PC+4 for jumps or CSR data    
 
     // ALU operation encoding (5-bit operation code)
     assign ALUOp[0] = i_jal | i_jalr | itype_l | stype | i_addi | i_ori | i_add | i_or |
@@ -110,9 +130,29 @@ module ctrl(
     assign DMType[1] = i_lhu | i_lb | i_sb;                              // Unsigned/byte access
     assign DMType[2] = i_lbu;                                            // Unsigned byte
     
-    // Next PC operation
-    assign NPCOp[0] = sbtype;                                            // Branch
-    assign NPCOp[1] = i_jal;                                             // Jump
-    assign NPCOp[2] = i_jalr;                                            // Jump register
+    // Branch instructions indicator
+    assign IsBranch = sbtype;
+    
+    // JAL instruction indicator
+    assign IsJAL = i_jal;
+    
+    // JALR instruction indicator
+    assign IsJALR = i_jalr;
+    
+    // ========== CSR Control Signal Generation ==========
+    // CSR write enable
+    assign CSRWrite = csrtype & !i_mret;
+    
+    // CSR read enable  
+    assign CSRRead = csrtype;
+    
+    // CSR operation
+    assign CSROp = Funct3;
+    
+    // CSR instruction indicator
+    assign IsCSR = csrtype;
+    
+    // MRET instruction indicator
+    assign IsMRET = i_mret;
 
 endmodule

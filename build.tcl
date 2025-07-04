@@ -33,6 +33,9 @@ set cpu_files [list \
     "cpu/forward.v" \
     "cpu/hazard.v" \
     "cpu/rf.v" \
+    "cpu/interrupt.v" \
+    "cpu/csr.v" \
+    "cpu/timer.v" \
 ]
 
 set constraint_file "board/Nexys4DDR_CPU.xdc"
