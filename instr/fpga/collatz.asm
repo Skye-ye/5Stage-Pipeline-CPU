@@ -1,5 +1,5 @@
             lui		x31, 0xFFFF0
-main:       lw      x2, 0x004(x31)
+main:       lw      x2, 0x004(x31)  # load n from SW[14:10]
             srli    x2, x2, 10
             andi    x2, x2, 0x01F
             jal     x3, collatz
@@ -20,5 +20,11 @@ done:       sw      x5, 0x00C(x31)
             jalr    x0, x3, 0
 # RISC-V 32-bit Collatz Conjecture (3n+1 problem)
 # Rule: if even, divide by 2; if odd, multiply by 3 and add 1
-# Continue until reaching 1. Count the steps
-# If the input is 27, the output should be 111
+# collatz(n) = steps to reach 1
+# check 7SEG for result
+#################################################
+#	x2		n = SW[14:10]
+#	x3		return addr
+#	x5		collatz(n)
+#	x31		0xFFFF0000
+#################################################
