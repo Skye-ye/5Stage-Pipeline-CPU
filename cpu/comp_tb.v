@@ -73,7 +73,7 @@ module comp_tb();
         $display("%sCycle: %6d: Reset released%s", COLOR_GREEN, cycle, COLOR_RESET);
         
         // Continue simulation to observe more pipeline behavior
-        #1000;
+        #10000;
         
         // Stop the clock monitoring to avoid interleaving
         stop_monitoring = 1;

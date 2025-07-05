@@ -17,6 +17,7 @@ module cpu(
     // Interrupt Interface
     input         external_int, // External interrupt request
     input         timer_int,    // Timer interrupt request
+    output        timer_int_ack,// Timer interrupt acknowledge
     
     // Debug Interface
     input  [4:0]  reg_sel,    // register selection for debug
@@ -111,6 +112,9 @@ module cpu(
     wire        global_int_enable;
     wire        mret_taken;
     
+    // Timer interrupt acknowledge: signal when timer interrupt is taken
+    assign timer_int_ack = trap_taken_WB && (trap_cause_WB == `CAUSE_TIMER_INTERRUPT);
+    
 
     // ========== 1 IF Stage ==========
     assign PCPLUS4_IF = PC_IF + 4;            // PC + 4
@@ -196,8 +200,6 @@ module cpu(
     interrupt U_INTERRUPT(
         .clk(clk),
         .reset(reset),
-        .external_int(external_int),
-        .timer_int(timer_int),
         .mie(mie),
         .mip(mip),
         .global_int_enable(global_int_enable),

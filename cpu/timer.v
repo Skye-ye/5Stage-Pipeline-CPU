@@ -2,10 +2,12 @@
 
 // Simple Timer Module for Interrupt Testing
 // Generates periodic timer interrupts
-module timer(
+module timer #(
+    parameter TIMER_LIMIT = 100
+)(
     input        clk,
     input        reset,
-    input [31:0] timer_limit,    // Timer limit value
+    input        timer_int_ack,  // Timer interrupt acknowledge signal
     output reg   timer_int       // Timer interrupt output
 );
 
@@ -17,12 +19,18 @@ module timer(
             timer_counter <= 32'h0;
             timer_int <= 1'b0;
         end else begin
-            if (timer_counter >= timer_limit) begin
-                timer_counter <= 32'h0;
-                timer_int <= 1'b1;     // Generate interrupt pulse
+            // Handle interrupt acknowledgment
+            if (timer_int && timer_int_ack) begin
+                timer_int <= 1'b0;     // Clear interrupt when acknowledged
+            end
+            
+            if (timer_counter == TIMER_LIMIT - 1) begin
+                timer_counter <= 32'h0;  // Reset counter after TIMER_LIMIT cycles
+                if (!timer_int) begin
+                    timer_int <= 1'b1;  // Generate interrupt if not already pending
+                end
             end else begin
-                timer_counter <= timer_counter + 1;
-                timer_int <= 1'b0;     // Clear interrupt
+                timer_counter <= timer_counter + 1;  // Increment counter
             end
         end
     end

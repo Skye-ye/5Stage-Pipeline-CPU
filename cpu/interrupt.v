@@ -6,10 +6,6 @@ module interrupt(
     input        clk,
     input        reset,
     
-    // External interrupt sources
-    input        external_int,     // External interrupt request
-    input        timer_int,        // Timer interrupt request  
-    
     // CSR interface
     input [31:0] mie,             // Machine interrupt enable register
     input [31:0] mip,             // Machine interrupt pending register
