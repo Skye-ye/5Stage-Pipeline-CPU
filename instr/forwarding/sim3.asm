@@ -11,7 +11,9 @@ br1ret: lw   x7, 0(x0)		#x7 = 5
 br2ret: addi x14, x0, 1
 		jal  x0, end
 br1:	addi x11, x0, 0x1c
-        jalr x0, x11, 0
+		sw   x11, 4(x0)
+		lw   x15, 4(x0)
+        jalr x0, x15, 0
 br2:	addi x12, x0, 40
         sw   x12, 8(x0)
         lw   x13, 8(x0)

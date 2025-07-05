@@ -100,6 +100,12 @@ module comp_tb();
             reg_sel = reg_sel + 1;
         end
         
+        // Display CSR registers
+        $display("\n%s%s=== Final CSR Register State ===%s", COLOR_BOLD_BLUE, COLOR_BOLD, COLOR_RESET);
+        $display("%smstatus = 0x%08h%s  %smie     = 0x%08h%s", COLOR_CYAN, U_COMP.U_CPU.mstatus, COLOR_RESET, COLOR_CYAN, U_COMP.U_CPU.mie, COLOR_RESET);
+        $display("%smtvec   = 0x%08h%s  %smip     = 0x%08h%s", COLOR_CYAN, U_COMP.U_CPU.mtvec, COLOR_RESET, COLOR_CYAN, U_COMP.U_CPU.mip, COLOR_RESET);
+        $display("%smepc    = 0x%08h%s  %smcause  = 0x%08h%s", COLOR_CYAN, U_COMP.U_CPU.mepc, COLOR_RESET, COLOR_CYAN, U_COMP.U_CPU.mcause, COLOR_RESET);
+        
         $display("%s%s=== Pipeline CPU simulation completed successfully! ===%s", COLOR_BOLD_GREEN, COLOR_BOLD, COLOR_RESET);
         $finish;
     end

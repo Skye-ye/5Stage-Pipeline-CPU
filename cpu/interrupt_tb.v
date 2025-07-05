@@ -12,7 +12,6 @@ module interrupt_tb();
     
     // External interrupt signals  
     reg external_int = 1'b0;
-    reg software_int = 1'b0;
     
     // CPU interface signals
     wire [31:0] PC, Addr_out, Data_out;
@@ -48,7 +47,6 @@ module interrupt_tb();
         .Data_out(Data_out),
         .external_int(external_int),
         .timer_int(timer_int),
-        .software_int(software_int),
         .reg_sel(reg_sel),
         .reg_data(reg_data)
     );
@@ -64,7 +62,6 @@ module interrupt_tb();
         // Initialize signals
         reset = 1;
         external_int = 0;
-        software_int = 0;
         
         // Reset the system
         #20;

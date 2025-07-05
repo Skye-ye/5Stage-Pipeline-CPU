@@ -19,9 +19,11 @@ module hazard(
     input IsBranch_ID,               // indicates if current ID instruction is a branch
     input IsJAL_ID,                  // indicates if current ID instruction is a jal
     input IsJALR_ID,                 // indicates if current ID instruction is a jalr
+
+    // Trap handling
+    input trap_taken,                // trap instruction in WB stage
     
-    // Interrupt handling
-    input interrupt_req,             // interrupt request
+    // MRET handling
     input mret_taken,                // MRET instruction in WB stage
     
     // Hazard Control Outputs
@@ -30,8 +32,7 @@ module hazard(
     output reg flush_IDEX,           // flush ID/EX register
     output reg flush_EXMEM,          // flush EX/MEM register
     output reg flush_MEMWB,          // flush MEM/WB register
-    output reg branch_taken,         // branch taken signal
-    output reg interrupt_taken       // interrupt taken signal
+    output reg branch_taken          // branch taken signal
 );
 
     // Helper function for register dependency check
@@ -57,11 +58,7 @@ module hazard(
     wire load_use_hazard = MemRead_EX && (rs1_hazard_EX || (rs2_hazard_EX && !MemWrite_ID));
     
     // Branch-load hazard detection
-    wire branch_load_hazard_EX = IsBranch_ID && MemRead_EX && (rs1_hazard_EX || rs2_hazard_EX);
-                            
-    wire branch_load_hazard_MEM = IsBranch_ID && MemRead_MEM && (rs1_hazard_MEM || rs2_hazard_MEM);
-                                   
-    wire branch_load_hazard = branch_load_hazard_EX || branch_load_hazard_MEM;
+    wire branch_load_hazard = IsBranch_ID && MemRead_EX && (rs1_hazard_EX || rs2_hazard_EX);
 
     // JALR hazard detection (only depends on rs1)
     wire jalr_load_hazard = IsJALR_ID && MemRead_EX && rs1_hazard_EX;
@@ -74,17 +71,15 @@ module hazard(
         flush_IDEX      = 1'b0;
         flush_EXMEM     = 1'b0;
         flush_MEMWB     = 1'b0;
-        interrupt_taken = 1'b0;
         branch_taken    = 1'b0;
-        
-        // ========== Interrupt Handling ==========
-        // Interrupt has highest priority - flush entire pipeline
-        if (interrupt_req) begin
-            interrupt_taken = 1'b1;  // Signal interrupt taken
-            flush_IFID      = 1'b1;  // Flush all pipeline stages
-            flush_IDEX      = 1'b1;
-            flush_EXMEM     = 1'b1;
-            flush_MEMWB     = 1'b1;
+
+        // ========== Trap Handling ==========
+        // Trap instruction - flush pipeline after trap
+        if (trap_taken) begin
+            flush_IFID  = 1'b1;      // Flush fetch and decode stages
+            flush_IDEX  = 1'b1;      // Flush execute stage
+            flush_EXMEM = 1'b1;      // Flush memory stage
+            flush_MEMWB = 1'b1;      // Flush write back stage
         end
         
         // ========== MRET Handling ==========
@@ -95,7 +90,7 @@ module hazard(
             flush_EXMEM = 1'b1;      // Flush memory stage
         end
         
-        // ========== Regular Hazard Detection (only if no interrupt/mret) ==========
+        // ========== Regular Hazard Detection ==========
         else begin
             branch_taken = (IsBranch_ID & !branch_load_hazard & branch_result) 
                          | IsJAL_ID

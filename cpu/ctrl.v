@@ -1,9 +1,10 @@
 module ctrl(
-    input  [6:0] Op,       // opcode
-    input  [6:0] Funct7,   // funct7
-    input  [2:0] Funct3,   // funct3
-    input        Zero,     // zero flag (unused in current implementation)
+    input [31:0] Inst,     // instruction
     
+    output [4:0] rs1,      // source register 1
+    output [4:0] rs2,      // source register 2
+    output [4:0] rd,       // destination register
+    output [11:0] csr_addr,// CSR address
     output       RegWrite, // control signal for register write
     output       MemWrite, // control signal for memory write
     output [5:0] EXTOp,    // control signal for immediate extension
@@ -15,13 +16,29 @@ module ctrl(
     output       IsJAL,    // JAL instruction indicator
     output       IsJALR,   // JALR instruction indicator
     
-    // CSR instruction support
+    // ZICSR instruction support
     output       CSRWrite, // CSR write enable
     output       CSRRead,  // CSR read enable
     output [2:0] CSROp,    // CSR operation
     output       IsCSR,    // CSR instruction indicator
-    output       IsMRET    // MRET instruction indicator
+
+    // Privileged instruction support
+    output       IsMRET,   // MRET instruction indicator
+
+    output       Exception,// Exception indicator
+    output [31:0] ExceptionCause // Exception cause
 );
+
+    wire [6:0]  Op = Inst[6:0];
+    wire [2:0]  Funct3 = Inst[14:12];
+    wire [6:0]  Funct7 = Inst[31:25];
+    wire [11:0] Funct12 = Inst[31:20];
+
+    assign rs1 = Inst[19:15];
+    assign rs2 = Inst[24:20];
+    assign rd = Inst[11:7];
+    assign csr_addr = Inst[31:20];
+
    
     // ========== Instruction Format Detection ==========
     wire rtype   = (Op == 7'b0110011);  // R-type: register-register operations
@@ -33,7 +50,7 @@ module ctrl(
     wire i_jalr  = (Op == 7'b1100111);  // I-type: jump and link register
     wire i_auipc = (Op == 7'b0010111);  // U-type: add upper immediate to PC
     wire i_lui   = (Op == 7'b0110111);  // U-type: load upper immediate
-    wire csrtype = (Op == `CSR_OPCODE);  // CSR instructions
+    wire csrtype = (Op == 7'b1110011);  // CSR instructions
     
     // ========== R-type Instructions ==========
     wire i_add  = rtype & (Funct7 == 7'b0000000) & (Funct3 == 3'b000);  // ADD
@@ -78,19 +95,21 @@ module ctrl(
     wire i_bltu = sbtype & (Funct3 == 3'b110);  // BLTU - branch if less than unsigned
     wire i_bgeu = sbtype & (Funct3 == 3'b111);  // BGEU - branch if greater or equal unsigned
     
-    // ========== CSR Instructions ==========
+    // ========== ZICSR Instructions ==========
     wire i_csrrw  = csrtype & (Funct3 == `CSR_CSRRW);   // CSRRW - CSR read/write
     wire i_csrrs  = csrtype & (Funct3 == `CSR_CSRRS);   // CSRRS - CSR read/set
     wire i_csrrc  = csrtype & (Funct3 == `CSR_CSRRC);   // CSRRC - CSR read/clear
     wire i_csrrwi = csrtype & (Funct3 == `CSR_CSRRWI);  // CSRRWI - CSR read/write immediate
     wire i_csrrsi = csrtype & (Funct3 == `CSR_CSRRSI);  // CSRRSI - CSR read/set immediate
     wire i_csrrci = csrtype & (Funct3 == `CSR_CSRRCI);  // CSRRCI - CSR read/clear immediate
-    wire i_mret   = csrtype & (Funct3 == 3'b000) & (Funct7 == 7'b0011000); // MRET
+
+    // ========== Privileged Instructions ==========
+    wire i_mret   = Inst == 32'h30200073;           // MRET
+    wire i_ecall  = Inst == 32'h00000073;           // ECALL
 
     // ========== Control Signal Generation ==========
     // Register write enable
-    assign RegWrite = rtype | itype_l | itype_r | i_jalr | i_jal | i_lui | i_auipc | 
-                      (csrtype & !i_mret); // CSR instructions write to register (except MRET)
+    assign RegWrite = rtype | itype_l | itype_r | i_jalr | i_jal | i_lui | i_auipc | (CSRRead & !i_mret);
     
     // Memory write enable
     assign MemWrite = stype;
@@ -100,7 +119,7 @@ module ctrl(
     
     // Write data selection (00: ALU, 01: Memory, 10: PC+4, 11: CSR)
     assign WDSel[0] = itype_l | csrtype;      // Memory data or CSR data
-    assign WDSel[1] = i_jal | i_jalr | csrtype; // PC+4 for jumps or CSR data    
+    assign WDSel[1] = i_jal | i_jalr | csrtype; // PC+4 for jumps or CSR data
 
     // ALU operation encoding (5-bit operation code)
     assign ALUOp[0] = i_jal | i_jalr | itype_l | stype | i_addi | i_ori | i_add | i_or |
@@ -141,10 +160,20 @@ module ctrl(
     
     // ========== CSR Control Signal Generation ==========
     // CSR write enable
-    assign CSRWrite = csrtype & !i_mret;
+    assign CSRWrite = i_csrrw 
+                    | (i_csrrs & (rs1 != 5'b00000))
+                    | (i_csrrc & (rs1 != 5'b00000))
+                    | i_csrrwi
+                    | (i_csrrsi & (Inst[19:15] != 5'b00000))
+                    | (i_csrrci & (Inst[19:15] != 5'b00000));
     
     // CSR read enable  
-    assign CSRRead = csrtype;
+    assign CSRRead = (i_csrrw & (rd != 5'b00000))
+                   | i_csrrs 
+                   | i_csrrc 
+                   | (i_csrrwi & (rd != 5'b00000))
+                   | i_csrrsi
+                   | i_csrrci;
     
     // CSR operation
     assign CSROp = Funct3;
@@ -154,5 +183,11 @@ module ctrl(
     
     // MRET instruction indicator
     assign IsMRET = i_mret;
+
+    // Exception indicator
+    assign Exception = i_ecall;
+
+    // Exception cause
+    assign ExceptionCause = i_ecall ? `CAUSE_ECALL_M : 32'h00000000;
 
 endmodule

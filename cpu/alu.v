@@ -5,8 +5,7 @@ module alu(
     input  signed [31:0] B,      // ALU input B
     input         [4:0]  ALUOp,  // ALU operation code
     input         [31:0] PC,     // Program counter (for AUIPC)
-    output reg signed [31:0] C,  // ALU result
-    output               Zero    // Zero flag
+    output reg signed [31:0] C   // ALU result
 );
     
     // ========== ALU Operation Logic ==========
@@ -29,8 +28,5 @@ module alu(
         endcase
     end
    
-    // Zero flag generation
-    assign Zero = (C == 32'b0);
-    
 endmodule
     

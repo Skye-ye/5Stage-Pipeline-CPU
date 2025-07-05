@@ -15,11 +15,14 @@ module csr(
     output reg [31:0] csr_rdata,   // CSR read data
     
     // Interrupt handling interface
-    input        interrupt_taken,   // Interrupt taken signal
-    input [31:0] interrupt_cause,   // Interrupt cause
-    input [31:0] interrupt_pc,      // PC when interrupt occurred
+    input        trap_taken,        // Trap taken signal
+    input [31:0] trap_cause,        // Trap cause
+    input [31:0] trap_pc,           // PC when trap occurred
     input        mret_taken,        // MRET instruction executed
-    input [31:0] mip_in,           // Machine interrupt pending from interrupt controller
+    
+    // External interrupt sources
+    input        external_interrupt,  // External interrupt request
+    input        timer_interrupt,     // Timer interrupt request
     
     // CSR outputs
     output [31:0] mstatus,         // Machine status register
@@ -52,24 +55,28 @@ module csr(
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             csr_mstatus <= 32'h0;
-            csr_mtvec   <= `INTERRUPT_VECTOR;  // Set default interrupt vector
+            csr_mtvec   <= 32'h0;
             csr_mepc    <= 32'h0;
             csr_mcause  <= 32'h0;
             csr_mie     <= 32'h0;
             csr_mip     <= 32'h0;
         end else begin
-            // Update MIP from interrupt controller
-            csr_mip <= mip_in;
+            // Update MIP register according to RISC-V spec
+            // MTIP is read-only and set by timer interrupt
+            csr_mip[`MIP_MTIP] <= timer_interrupt;
+            
+            // MEIP is read-only and set by external interrupt controller
+            csr_mip[`MIP_MEIP] <= external_interrupt;
             
             // Handle interrupt entry
-            if (interrupt_taken) begin
+            if (trap_taken) begin
                 // Save current status
                 csr_mstatus[`MSTATUS_MPIE] <= csr_mstatus[`MSTATUS_MIE];
                 csr_mstatus[`MSTATUS_MIE] <= 1'b0; // Disable interrupts
                 
                 // Save interrupted PC and cause
-                csr_mepc <= interrupt_pc;
-                csr_mcause <= interrupt_cause;
+                csr_mepc <= trap_pc;
+                csr_mcause <= trap_cause;
             end
             
             // Handle MRET instruction
@@ -111,10 +118,19 @@ module csr(
                         endcase
                     end
                     `CSR_MIE: begin
+                        // MIE register - all bits are writable for machine mode
                         case (csr_op)
                             `CSR_CSRRW: csr_mie <= csr_wdata;
                             `CSR_CSRRS: csr_mie <= csr_mie | csr_wdata;
                             `CSR_CSRRC: csr_mie <= csr_mie & ~csr_wdata;
+                        endcase
+                    end
+                    `CSR_MIP: begin
+                        // MIP register - not writable (since software interrupt is not implemented)
+                        case (csr_op)
+                            `CSR_CSRRW: ;
+                            `CSR_CSRRS: ;
+                            `CSR_CSRRC: ;
                         endcase
                     end
                 endcase

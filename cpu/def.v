@@ -38,10 +38,6 @@
 `define PC_INCREMENT 32'h00000004
 `define REG_ZERO 5'b00000
 
-// Interrupt and Exception related
-`define INTERRUPT_VECTOR 32'h80000000  // Base interrupt vector address
-`define MRET_INSTRUCTION 32'h30200073  // mret instruction encoding
-
 // CSR addresses (Machine Mode)
 `define CSR_MSTATUS  12'h300  // Machine status register
 `define CSR_MIE      12'h304  // Machine interrupt enable
@@ -51,7 +47,6 @@
 `define CSR_MIP      12'h344  // Machine interrupt pending
 
 // CSR instruction opcodes
-`define CSR_OPCODE   7'b1110011
 `define CSR_CSRRW    3'b001  // CSR Read/Write
 `define CSR_CSRRS    3'b010  // CSR Read/Set
 `define CSR_CSRRC    3'b011  // CSR Read/Clear
@@ -62,13 +57,17 @@
 // Exception and interrupt causes
 `define CAUSE_TIMER_INTERRUPT    32'h80000007  // Machine timer interrupt
 `define CAUSE_EXTERNAL_INTERRUPT 32'h8000000B  // Machine external interrupt
-`define CAUSE_SOFTWARE_INTERRUPT 32'h80000003  // Machine software interrupt
 `define CAUSE_ECALL_M            32'h0000000B  // Environment call from M-mode
 
-// Interrupt enable bits
-`define MIE_TIMER_INT    3   // Timer interrupt enable bit
-`define MIE_EXTERNAL_INT 11  // External interrupt enable bit
-`define MIE_SOFTWARE_INT 7   // Software interrupt enable bit
+// Machine Interrupt Enable (MIE) and Pending (MIP) register bit positions
+// Machine-level only implementation according to RISC-V spec
+// Machine software interrupt is not implemented
+`define MIE_MTIE    7   // Machine timer interrupt enable
+`define MIE_MEIE   11   // Machine external interrupt enable
+
+// MIP register bit positions (same as MIE)
+`define MIP_MTIP    7   // Machine timer interrupt pending
+`define MIP_MEIP   11   // Machine external interrupt pending
 
 // Status register bits
 `define MSTATUS_MIE      3   // Machine interrupt enable
