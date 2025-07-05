@@ -1,6 +1,7 @@
 module comp #(
     parameter INSTR_FILE = "./instr/non_data_sim5.dat",
-    parameter TIMER_LIMIT = 100
+    parameter TIMER_LIMIT = 100,
+    parameter EXT_INT_LIMIT = 200
 )(
     input          clk,
     input          rstn,
@@ -15,6 +16,8 @@ module comp #(
    wire [31:0]    dm_addr, dm_din, dm_dout;
    wire           timer_int;
    wire           timer_int_ack;
+   wire           external_int;
+   wire           ext_int_ack;
    
    wire rst = ~rstn;
        
@@ -29,9 +32,10 @@ module comp #(
          .PC_out(PC),               // output: PC
          .Addr_out(dm_addr),        // output: address from cpu to memory
          .Data_out(dm_din),         // output: data from cpu to memory
-         .external_int(1'b0),       // input:  external interrupt (tied to 0)
+         .external_int(external_int), // input:  external interrupt from external interrupt generator
          .timer_int(timer_int),     // input:  timer interrupt from timer module
          .timer_int_ack(timer_int_ack), // output: timer interrupt acknowledge
+         .ext_int_ack(ext_int_ack), // output: external interrupt acknowledge
          .reg_sel(reg_sel),         // input:  register selection
          .reg_data(reg_data)        // output: register data
          );
@@ -58,6 +62,14 @@ module comp #(
       .reset(rst),
       .timer_int_ack(timer_int_ack),
       .timer_int(timer_int)
+   );
+
+   // instantiation of external interrupt generator
+   external_int_gen #(.EXT_INT_LIMIT(EXT_INT_LIMIT)) U_EXT_INT_GEN(
+      .clk(clk),
+      .reset(rst),
+      .ext_int_ack(ext_int_ack),
+      .external_int(external_int)
    );
         
 endmodule

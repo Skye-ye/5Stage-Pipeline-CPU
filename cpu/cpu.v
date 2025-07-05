@@ -18,6 +18,7 @@ module cpu(
     input         external_int, // External interrupt request
     input         timer_int,    // Timer interrupt request
     output        timer_int_ack,// Timer interrupt acknowledge
+    output        ext_int_ack,  // External interrupt acknowledge
     
     // Debug Interface
     input  [4:0]  reg_sel,    // register selection for debug
@@ -112,8 +113,9 @@ module cpu(
     wire        global_int_enable;
     wire        mret_taken;
     
-    // Timer interrupt acknowledge: signal when timer interrupt is taken
+    // Interrupt acknowledge signals: signal when specific interrupt is taken
     assign timer_int_ack = trap_taken_WB && (trap_cause_WB == `CAUSE_TIMER_INTERRUPT);
+    assign ext_int_ack = trap_taken_WB && (trap_cause_WB == `CAUSE_EXTERNAL_INTERRUPT);
     
 
     // ========== 1 IF Stage ==========
