@@ -1,5 +1,5 @@
 module comp #(
-    parameter INSTR_FILE = "./instr/non_data_sim5.dat",
+    parameter INSTR_FILE = "./instr/morse/program.dat",
     parameter TIMER_LIMIT = 100,
     parameter EXT_INT_LIMIT = 200
 )(
@@ -9,12 +9,13 @@ module comp #(
     output [31:0]  reg_data
 );
    
-   wire [31:0]    instr;
-   wire [31:0]    PC;
-   wire           MemWrite;
-   wire           MemRead;
+   // Unified memory interface wires
+   wire           IMRd;
+   wire [31:0]    IMAddr;
+   wire [31:0]    IMOut;
+   wire           DMRd, DMWr;
+   wire [31:0]    DMAddr, DMIn, DMOut;
    wire [2:0]     DMType;
-   wire [31:0]    dm_addr, dm_din, dm_dout;
    wire           timer_int;
    wire           timer_int_ack;
    wire           external_int;
@@ -26,14 +27,19 @@ module comp #(
    cpu U_CPU(
          .clk(clk),                 // input:  cpu clock
          .reset(rst),               // input:  reset
-         .Inst_in(instr),           // input:  instruction
-         .Data_in(dm_dout),         // input:  data to cpu  
-         .mem_w(MemWrite),          // output: memory write signal
-         .mem_r(MemRead),           // output: memory read signal
-         .DMType_out(DMType),       // output: data memory type
-         .PC_out(PC),               // output: PC
-         .Addr_out(dm_addr),        // output: address from cpu to memory
-         .Data_out(dm_din),         // output: data from cpu to memory
+         
+         // Unified Memory Interface
+         .IMRd(IMRd),               // output: instruction memory read enable
+         .IMAddr(IMAddr),           // output: instruction memory address
+         .IMOut(IMOut),             // input:  instruction from memory
+         
+         .DMRd(DMRd),               // output: data memory read enable
+         .DMWr(DMWr),               // output: data memory write enable
+         .DMAddr(DMAddr),           // output: data memory address
+         .DMIn(DMIn),               // output: data to memory
+         .DMType(DMType),           // output: data memory access type
+         .DMOut(DMOut),             // input:  data from memory
+         
          .external_int(external_int), // input:  external interrupt from external interrupt generator
          .timer_int(timer_int),     // input:  timer interrupt from timer module
          .timer_int_ack(timer_int_ack), // output: timer interrupt acknowledge
@@ -42,22 +48,22 @@ module comp #(
          .reg_data(reg_data)        // output: register data
          );
          
-  // instantiation of data memory  
-   dm    U_DM(
-         .clk(clk),           // input:  cpu clock
-         .DMWr(MemWrite),     // input:  ram write
-         .DMRd(MemRead),      // input:  ram read
-         .addr(dm_addr),      // input:  full ram address
-         .din(dm_din),        // input:  data to ram
-         .dout(dm_dout),      // output: data from ram
-         .DMType(DMType)      // input:  data memory type
-         );
+  // instantiation of unified memory (replaces both im and dm)
+   mem #(.PROGRAM_FILE(INSTR_FILE)) U_MEM(
+         .clk(clk),                 // input:  cpu clock
          
-  // instantiation of instruction memory (used for simulation)
-   im #(.INSTR_FILE(INSTR_FILE)) U_IM ( 
-      .addr(PC[11:2]),     // input:  rom address
-      .dout(instr)        // output: instruction
-   );
+         // Instruction memory interface
+         .im_addr(IMAddr[13:2]),    // input:  instruction address
+         .im_dout(IMOut),           // output: instruction
+         
+         // Data memory interface
+         .DMWr(DMWr),               // input:  data memory write
+         .DMRd(DMRd),               // input:  data memory read
+         .dm_addr(DMAddr),          // input:  data memory address
+         .dm_din(DMIn),             // input:  data to memory
+         .dm_dout(DMOut),           // output: data from memory
+         .DMType(DMType)            // input:  data memory type
+         );
 
    // instantiation of timer
    timer #(.TIMER_LIMIT(TIMER_LIMIT)) U_TIMER(

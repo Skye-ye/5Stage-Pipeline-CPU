@@ -5,15 +5,17 @@ module cpu(
     input        clk,         // system clock
     input        reset,       // active high reset
     
-    // Memory Interface
-    input  [31:0] Inst_in,    // instruction from instruction memory
-    input  [31:0] Data_in,    // data from data memory
-    output        mem_w,      // memory write enable
-    output        mem_r,      // memory read enable
-    output [2:0]  DMType_out, // data memory access type
-    output [31:0] PC_out,     // PC address for instruction memory
-    output [31:0] Addr_out,   // address for data memory
-    output [31:0] Data_out,   // data to data memory
+    // Unified Memory Interface
+    output        IMRd,       // instruction memory read enable
+    output [31:0] IMAddr,     // instruction memory address
+    input  [31:0] IMOut,      // instruction from memory
+    
+    output        DMRd,       // data memory read enable
+    output        DMWr,       // data memory write enable
+    output [31:0] DMAddr,     // data memory address
+    output [31:0] DMIn,       // data to memory
+    output [2:0]  DMType,     // data memory access type
+    input  [31:0] DMOut,      // data from memory
     
     // Interrupt Interface
     input         external_int, // External interrupt request
@@ -144,7 +146,9 @@ module cpu(
         end
     end
 
-    assign PC_out = PC_IF;                // Output PC to instruction memory
+    // Instruction memory interface
+    assign IMRd = !reset;                 // Always read instruction memory when not in reset
+    assign IMAddr = PC_IF;                // Send PC to instruction memory
     
     // IF/ID Pipeline Register
     always @(posedge clk or posedge reset) begin
@@ -154,7 +158,7 @@ module cpu(
             IFID_valid <= 1'b0;
         end else if (!stall) begin
             IFID_PC <= PC_IF;
-            IFID_inst <= Inst_in;
+            IFID_inst <= IMOut;
             IFID_valid <= 1'b1;
         end
     end
@@ -230,7 +234,7 @@ module cpu(
             2'b01: branch_A = WriteData_WB;        // Forward from WB stage
             2'b10: begin                           // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: branch_A = Data_in;      // Memory data
+                    `WDSel_FromMEM: branch_A = DMOut;      // Memory data
                     `WDSel_FromCSR: branch_A = csr_rdata;    // CSR data
                     default:        branch_A = EXMEM_ALUOut; // ALU data
                 endcase
@@ -248,7 +252,7 @@ module cpu(
             2'b01: branch_B = WriteData_WB;        // Forward from WB stage
             2'b10: begin                           // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: branch_B = Data_in;      // Memory data
+                    `WDSel_FromMEM: branch_B = DMOut;      // Memory data
                     `WDSel_FromCSR: branch_B = csr_rdata;    // CSR data
                     default:        branch_B = EXMEM_ALUOut; // ALU data
                 endcase
@@ -332,7 +336,7 @@ module cpu(
             2'b01: ALU_A = WriteData_WB;       // Forward from WB stage  
             2'b10: begin                       // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: ALU_A = Data_in;      // Memory data
+                    `WDSel_FromMEM: ALU_A = DMOut;      // Memory data
                     `WDSel_FromCSR: ALU_A = csr_rdata;    // CSR data
                     default:        ALU_A = EXMEM_ALUOut; // ALU data
                 endcase
@@ -349,7 +353,7 @@ module cpu(
             2'b01: ALU_B_forwarded = WriteData_WB;  // Forward from WB stage
             2'b10: begin                            // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: ALU_B_forwarded = Data_in;      // Memory data
+                    `WDSel_FromMEM: ALU_B_forwarded = DMOut;      // Memory data
                     `WDSel_FromCSR: ALU_B_forwarded = csr_rdata;    // CSR data
                     default:        ALU_B_forwarded = EXMEM_ALUOut; // ALU data
                 endcase
@@ -416,12 +420,12 @@ module cpu(
     end
 
     // ========== 4 MEM Stage ==========
-    // Memory interface
-    assign Addr_out = EXMEM_ALUOut;
-    assign Data_out = forwardMEM ? WriteData_WB : EXMEM_RD2;
-    assign DMType_out = EXMEM_DMType;
-    assign mem_w = EXMEM_MemWrite & EXMEM_valid;
-    assign mem_r = EXMEM_MemRead & EXMEM_valid;
+    // Data memory interface
+    assign DMAddr = EXMEM_ALUOut;
+    assign DMIn = forwardMEM ? WriteData_WB : EXMEM_RD2;
+    assign DMType = EXMEM_DMType;
+    assign DMWr = EXMEM_MemWrite & EXMEM_valid;
+    assign DMRd = EXMEM_MemRead & EXMEM_valid;
 
     // CSR signals
     assign mret_taken = MEMWB_IsMRET & MEMWB_valid;
@@ -468,7 +472,7 @@ module cpu(
             MEMWB_valid <= 1'b0;
         end else begin
             MEMWB_ALUOut <= EXMEM_ALUOut;
-            MEMWB_MemData <= Data_in;
+            MEMWB_MemData <= DMOut;
             MEMWB_PC <= EXMEM_PC;
             MEMWB_CSRData <= csr_rdata;
             MEMWB_rd <= EXMEM_rd;

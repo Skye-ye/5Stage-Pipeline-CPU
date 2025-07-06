@@ -63,9 +63,10 @@ echo "Compiling with instruction file: ${INSTR_FILE}"
 
 # Compile with the specified instruction file including interrupt support
 iverilog -I cpu -D INSTR_FILE=${INSTR_FILE} -o cpu_sim.out \
-    cpu/def.v cpu/alu.v cpu/ctrl.v cpu/dm.v cpu/ext.v cpu/im.v cpu/rf.v \
+    cpu/def.v cpu/alu.v cpu/ctrl.v cpu/ext.v cpu/rf.v \
     cpu/hazard.v cpu/forward.v cpu/branch.v cpu/interrupt.v cpu/csr.v \
-    cpu/cpu.v cpu/comp.v cpu/comp_tb.v cpu/trap.v cpu/timer.v cpu/external_int_gen.v
+    cpu/cpu.v cpu/comp.v cpu/comp_tb.v cpu/trap.v cpu/timer.v cpu/external_int_gen.v \
+    cpu/mem.v
 
 if [ $? -ne 0 ]; then
     echo "Compilation failed!"

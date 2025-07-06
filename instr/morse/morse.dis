@@ -1,0 +1,148 @@
+
+morse.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00004137          	lui	sp,0x4
+   4:	32800293          	li	t0,808
+   8:	32800313          	li	t1,808
+
+0000000c <bss_clear>:
+   c:	00628863          	beq	t0,t1,1c <bss_done>
+  10:	0002a023          	sw	zero,0(t0)
+  14:	00428293          	addi	t0,t0,4
+  18:	fe62cae3          	blt	t0,t1,c <bss_clear>
+
+0000001c <bss_done>:
+  1c:	178000ef          	jal	ra,194 <main>
+
+00000020 <halt>:
+  20:	0000006f          	j	20 <halt>
+
+00000024 <uart_puts>:
+  24:	00054783          	lbu	a5,0(a0)
+  28:	00078a63          	beqz	a5,3c <uart_puts+0x18>
+  2c:	00f00023          	sb	a5,0(zero) # 0 <_start>
+  30:	00150513          	addi	a0,a0,1
+  34:	00054783          	lbu	a5,0(a0)
+  38:	fe079ae3          	bnez	a5,2c <uart_puts+0x8>
+  3c:	00008067          	ret
+
+00000040 <decode_morse_message>:
+  40:	00054783          	lbu	a5,0(a0)
+  44:	14078463          	beqz	a5,18c <decode_morse_message+0x14c>
+  48:	02000313          	li	t1,32
+  4c:	00700e93          	li	t4,7
+  50:	02f00f93          	li	t6,47
+  54:	20400f13          	li	t5,516
+  58:	02400e13          	li	t3,36
+  5c:	00100293          	li	t0,1
+  60:	03f00393          	li	t2,63
+  64:	00054783          	lbu	a5,0(a0)
+  68:	00679863          	bne	a5,t1,78 <decode_morse_message+0x38>
+  6c:	00150513          	addi	a0,a0,1
+  70:	00054783          	lbu	a5,0(a0)
+  74:	fe678ce3          	beq	a5,t1,6c <decode_morse_message+0x2c>
+  78:	10078a63          	beqz	a5,18c <decode_morse_message+0x14c>
+  7c:	ff010113          	addi	sp,sp,-16 # 3ff0 <_bss_end+0x3cc8>
+  80:	0400006f          	j	c0 <decode_morse_message+0x80>
+  84:	01010713          	addi	a4,sp,16
+  88:	00f707b3          	add	a5,a4,a5
+  8c:	fe078c23          	sb	zero,-8(a5)
+  90:	00814783          	lbu	a5,8(sp)
+  94:	05f79c63          	bne	a5,t6,ec <decode_morse_message+0xac>
+  98:	00658023          	sb	t1,0(a1)
+  9c:	00158593          	addi	a1,a1,1
+  a0:	00054783          	lbu	a5,0(a0)
+  a4:	0c078a63          	beqz	a5,178 <decode_morse_message+0x138>
+  a8:	00054783          	lbu	a5,0(a0)
+  ac:	00679863          	bne	a5,t1,bc <decode_morse_message+0x7c>
+  b0:	00150513          	addi	a0,a0,1
+  b4:	00054783          	lbu	a5,0(a0)
+  b8:	fe678ce3          	beq	a5,t1,b0 <decode_morse_message+0x70>
+  bc:	0a078e63          	beqz	a5,178 <decode_morse_message+0x138>
+  c0:	00810713          	addi	a4,sp,8
+  c4:	00000793          	li	a5,0
+  c8:	00054683          	lbu	a3,0(a0)
+  cc:	0df6f613          	andi	a2,a3,223
+  d0:	fa060ae3          	beqz	a2,84 <decode_morse_message+0x44>
+  d4:	00d70023          	sb	a3,0(a4)
+  d8:	00178793          	addi	a5,a5,1
+  dc:	00150513          	addi	a0,a0,1
+  e0:	00170713          	addi	a4,a4,1
+  e4:	ffd792e3          	bne	a5,t4,c8 <decode_morse_message+0x88>
+  e8:	f9dff06f          	j	84 <decode_morse_message+0x44>
+  ec:	001f0893          	addi	a7,t5,1
+  f0:	00000813          	li	a6,0
+  f4:	0100006f          	j	104 <decode_morse_message+0xc4>
+  f8:	00180813          	addi	a6,a6,1
+  fc:	00788893          	addi	a7,a7,7
+ 100:	07c80463          	beq	a6,t3,168 <decode_morse_message+0x128>
+ 104:	00088713          	mv	a4,a7
+ 108:	00810793          	addi	a5,sp,8
+ 10c:	00178793          	addi	a5,a5,1
+ 110:	fff7c683          	lbu	a3,-1(a5)
+ 114:	00170713          	addi	a4,a4,1
+ 118:	fff74603          	lbu	a2,-1(a4)
+ 11c:	fcd61ee3          	bne	a2,a3,f8 <decode_morse_message+0xb8>
+ 120:	fe0696e3          	bnez	a3,10c <decode_morse_message+0xcc>
+ 124:	00381793          	slli	a5,a6,0x3
+ 128:	41078833          	sub	a6,a5,a6
+ 12c:	010f0833          	add	a6,t5,a6
+ 130:	00084783          	lbu	a5,0(a6)
+ 134:	00f58023          	sb	a5,0(a1)
+ 138:	00158693          	addi	a3,a1,1
+ 13c:	00054783          	lbu	a5,0(a0)
+ 140:	02679863          	bne	a5,t1,170 <decode_morse_message+0x130>
+ 144:	00000793          	li	a5,0
+ 148:	00178793          	addi	a5,a5,1
+ 14c:	00f50733          	add	a4,a0,a5
+ 150:	00074703          	lbu	a4,0(a4)
+ 154:	fe670ae3          	beq	a4,t1,148 <decode_morse_message+0x108>
+ 158:	02f2d663          	bge	t0,a5,184 <decode_morse_message+0x144>
+ 15c:	006580a3          	sb	t1,1(a1)
+ 160:	00258593          	addi	a1,a1,2
+ 164:	f3dff06f          	j	a0 <decode_morse_message+0x60>
+ 168:	00038793          	mv	a5,t2
+ 16c:	fc9ff06f          	j	134 <decode_morse_message+0xf4>
+ 170:	00068593          	mv	a1,a3
+ 174:	f2dff06f          	j	a0 <decode_morse_message+0x60>
+ 178:	00058023          	sb	zero,0(a1)
+ 17c:	01010113          	addi	sp,sp,16
+ 180:	00008067          	ret
+ 184:	00068593          	mv	a1,a3
+ 188:	f21ff06f          	j	a8 <decode_morse_message+0x68>
+ 18c:	00058023          	sb	zero,0(a1)
+ 190:	00008067          	ret
+
+00000194 <main>:
+ 194:	f5010113          	addi	sp,sp,-176
+ 198:	0a112623          	sw	ra,172(sp)
+ 19c:	31000793          	li	a5,784
+ 1a0:	0007a503          	lw	a0,0(a5)
+ 1a4:	0047a583          	lw	a1,4(a5)
+ 1a8:	0087a603          	lw	a2,8(a5)
+ 1ac:	00c7a683          	lw	a3,12(a5)
+ 1b0:	0107a703          	lw	a4,16(a5)
+ 1b4:	08a12423          	sw	a0,136(sp)
+ 1b8:	08b12623          	sw	a1,140(sp)
+ 1bc:	08c12823          	sw	a2,144(sp)
+ 1c0:	08d12a23          	sw	a3,148(sp)
+ 1c4:	08e12c23          	sw	a4,152(sp)
+ 1c8:	0147c783          	lbu	a5,20(a5)
+ 1cc:	08f10e23          	sb	a5,156(sp)
+ 1d0:	00810593          	addi	a1,sp,8
+ 1d4:	08810513          	addi	a0,sp,136
+ 1d8:	e69ff0ef          	jal	ra,40 <decode_morse_message>
+ 1dc:	30000513          	li	a0,768
+ 1e0:	e45ff0ef          	jal	ra,24 <uart_puts>
+ 1e4:	00810513          	addi	a0,sp,8
+ 1e8:	e3dff0ef          	jal	ra,24 <uart_puts>
+ 1ec:	30c00513          	li	a0,780
+ 1f0:	e35ff0ef          	jal	ra,24 <uart_puts>
+ 1f4:	00000513          	li	a0,0
+ 1f8:	0ac12083          	lw	ra,172(sp)
+ 1fc:	0b010113          	addi	sp,sp,176
+ 200:	00008067          	ret
