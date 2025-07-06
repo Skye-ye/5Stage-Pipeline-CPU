@@ -12,6 +12,7 @@ module comp #(
    wire [31:0]    instr;
    wire [31:0]    PC;
    wire           MemWrite;
+   wire           MemRead;
    wire [2:0]     DMType;
    wire [31:0]    dm_addr, dm_din, dm_dout;
    wire           timer_int;
@@ -28,6 +29,7 @@ module comp #(
          .Inst_in(instr),           // input:  instruction
          .Data_in(dm_dout),         // input:  data to cpu  
          .mem_w(MemWrite),          // output: memory write signal
+         .mem_r(MemRead),           // output: memory read signal
          .DMType_out(DMType),       // output: data memory type
          .PC_out(PC),               // output: PC
          .Addr_out(dm_addr),        // output: address from cpu to memory
@@ -44,6 +46,7 @@ module comp #(
    dm    U_DM(
          .clk(clk),           // input:  cpu clock
          .DMWr(MemWrite),     // input:  ram write
+         .DMRd(MemRead),      // input:  ram read
          .addr(dm_addr),      // input:  full ram address
          .din(dm_din),        // input:  data to ram
          .dout(dm_dout),      // output: data from ram
@@ -52,7 +55,7 @@ module comp #(
          
   // instantiation of instruction memory (used for simulation)
    im #(.INSTR_FILE(INSTR_FILE)) U_IM ( 
-      .addr(PC[8:2]),     // input:  rom address
+      .addr(PC[11:2]),     // input:  rom address
       .dout(instr)        // output: instruction
    );
 

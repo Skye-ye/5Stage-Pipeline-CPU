@@ -9,6 +9,7 @@ module cpu(
     input  [31:0] Inst_in,    // instruction from instruction memory
     input  [31:0] Data_in,    // data from data memory
     output        mem_w,      // memory write enable
+    output        mem_r,      // memory read enable
     output [2:0]  DMType_out, // data memory access type
     output [31:0] PC_out,     // PC address for instruction memory
     output [31:0] Addr_out,   // address for data memory
@@ -37,7 +38,7 @@ module cpu(
     reg [4:0]  IDEX_ALUOp;
     reg [2:0]  IDEX_DMType, IDEX_CSROp;
     reg [1:0]  IDEX_WDSel;
-    reg        IDEX_RegWrite, IDEX_MemWrite, IDEX_ALUSrc;
+    reg        IDEX_RegWrite, IDEX_MemWrite, IDEX_MemRead, IDEX_ALUSrc;
     reg        IDEX_CSRWrite, IDEX_CSRRead, IDEX_IsCSR, IDEX_IsMRET;
     reg [11:0] IDEX_CSRAddr;
     reg        IDEX_valid;
@@ -49,7 +50,7 @@ module cpu(
     reg [4:0]  EXMEM_rd, EXMEM_rs2;
     reg [2:0]  EXMEM_DMType, EXMEM_CSROp;
     reg [1:0]  EXMEM_WDSel;
-    reg        EXMEM_RegWrite, EXMEM_MemWrite;
+    reg        EXMEM_RegWrite, EXMEM_MemWrite, EXMEM_MemRead;
     reg        EXMEM_CSRWrite, EXMEM_CSRRead, EXMEM_IsCSR, EXMEM_IsMRET;
     reg [11:0] EXMEM_CSRAddr;
     reg        EXMEM_valid;
@@ -75,7 +76,7 @@ module cpu(
     wire [31:0] RD1_ID, RD2_ID, imm_ID;   // Register data and immediate
     wire [4:0]  rs1_ID, rs2_ID, rd_ID;    // Register addresses
     wire [2:0]  DMType_ID;                // Data memory access type
-    wire        RegWrite_ID, MemWrite_ID, ALUSrc_ID;
+    wire        RegWrite_ID, MemWrite_ID, MemRead_ID, ALUSrc_ID;
     wire [4:0]  ALUOp_ID;
     wire [1:0]  WDSel_ID;
     wire [5:0]  EXTOp_ID;
@@ -168,6 +169,7 @@ module cpu(
         .csr_addr(csr_addr_ID),
         .RegWrite(RegWrite_ID), 
         .MemWrite(MemWrite_ID),
+        .MemRead(MemRead_ID),
         .EXTOp(EXTOp_ID), 
         .ALUOp(ALUOp_ID), 
         .ALUSrc(ALUSrc_ID), 
@@ -284,6 +286,7 @@ module cpu(
             IDEX_WDSel <= 2'b00;
             IDEX_RegWrite <= 1'b0;
             IDEX_MemWrite <= 1'b0;
+            IDEX_MemRead <= 1'b0;
             IDEX_ALUSrc <= 1'b0;
             IDEX_CSRWrite <= 1'b0;
             IDEX_CSRRead <= 1'b0;
@@ -307,6 +310,7 @@ module cpu(
             IDEX_WDSel <= WDSel_ID;
             IDEX_RegWrite <= RegWrite_ID;
             IDEX_MemWrite <= MemWrite_ID;
+            IDEX_MemRead <= MemRead_ID;
             IDEX_ALUSrc <= ALUSrc_ID;
             IDEX_CSRWrite <= CSRWrite_ID;
             IDEX_CSRRead <= CSRRead_ID;
@@ -379,6 +383,7 @@ module cpu(
             EXMEM_WDSel <= 2'b00;
             EXMEM_RegWrite <= 1'b0;
             EXMEM_MemWrite <= 1'b0;
+            EXMEM_MemRead <= 1'b0;
             EXMEM_CSRWrite <= 1'b0;
             EXMEM_CSRRead <= 1'b0;
             EXMEM_IsCSR <= 1'b0;
@@ -398,6 +403,7 @@ module cpu(
             EXMEM_WDSel <= IDEX_WDSel;
             EXMEM_RegWrite <= IDEX_RegWrite;
             EXMEM_MemWrite <= IDEX_MemWrite;
+            EXMEM_MemRead <= IDEX_MemRead;
             EXMEM_CSRWrite <= IDEX_CSRWrite;
             EXMEM_CSRRead <= IDEX_CSRRead;
             EXMEM_IsCSR <= IDEX_IsCSR;
@@ -415,7 +421,8 @@ module cpu(
     assign Data_out = forwardMEM ? WriteData_WB : EXMEM_RD2;
     assign DMType_out = EXMEM_DMType;
     assign mem_w = EXMEM_MemWrite & EXMEM_valid;
-    
+    assign mem_r = EXMEM_MemRead & EXMEM_valid;
+
     // CSR signals
     assign mret_taken = MEMWB_IsMRET & MEMWB_valid;
 

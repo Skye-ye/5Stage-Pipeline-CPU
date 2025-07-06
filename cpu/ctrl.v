@@ -7,6 +7,7 @@ module ctrl(
     output [11:0] csr_addr,// CSR address
     output       RegWrite, // control signal for register write
     output       MemWrite, // control signal for memory write
+    output       MemRead,  // control signal for memory read
     output [5:0] EXTOp,    // control signal for immediate extension
     output [4:0] ALUOp,    // ALU operation code
     output       ALUSrc,   // ALU source selection
@@ -113,6 +114,9 @@ module ctrl(
     
     // Memory write enable
     assign MemWrite = stype;
+
+    // Memory read enable
+    assign MemRead = itype_l;
     
     // ALU source selection (0: register, 1: immediate)
     assign ALUSrc = itype_l | itype_r | stype | i_jal | i_jalr | i_auipc | i_lui;
