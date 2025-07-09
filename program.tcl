@@ -1,4 +1,4 @@
-set bitfile "bitstream/collatz.bit"
+set bitfile "bitstream/morse.bit"
 
 open_hw_manager
 connect_hw_server -allow_non_jtag

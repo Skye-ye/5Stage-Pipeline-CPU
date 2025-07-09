@@ -88,12 +88,50 @@ mv test.dat "$ASSEMBLY_DIR/$TARGET_NAME"
 
 # Generate COE file
 echo "Generating .coe file..."
-python3 "$SCRIPT_DIR/script/convert_coe.py" "$ASSEMBLY_DIR/$TARGET_NAME"
+COE_OUTPUT="$ASSEMBLY_DIR/$COE_NAME"
 
-# Move COE file to target directory (if needed)
-if [ -f "$COE_NAME" ]; then
-    mv "$COE_NAME" "$ASSEMBLY_DIR/"
+# Check if .dat file exists
+if [ ! -f "$ASSEMBLY_DIR/$TARGET_NAME" ]; then
+    echo "Error: .dat file not found at $ASSEMBLY_DIR/$TARGET_NAME"
+    exit 1
 fi
+
+# Create COE file header
+cat > "$COE_OUTPUT" << 'EOF'
+memory_initialization_radix=16;
+memory_initialization_vector=
+EOF
+
+# Convert .dat to .coe format
+# First, collect all hex values into an array
+hex_values=()
+while IFS= read -r line || [[ -n "$line" ]]; do
+    # Remove whitespace and newlines
+    line=$(echo "$line" | tr -d ' \t\n\r')
+    
+    # Skip empty lines
+    if [ -n "$line" ]; then
+        # Take first 8 characters (32-bit hex value)
+        hex_value="${line:0:8}"
+        hex_values+=("$hex_value")
+    fi
+done < "$ASSEMBLY_DIR/$TARGET_NAME"
+
+# Write the hex values with proper comma formatting
+for i in "${!hex_values[@]}"; do
+    if [ $i -eq 0 ]; then
+        # First line - no comma
+        echo "${hex_values[i]}," >> "$COE_OUTPUT"
+    elif [ $i -eq $((${#hex_values[@]} - 1)) ]; then
+        # Last line - no comma, add semicolon
+        echo "${hex_values[i]};" >> "$COE_OUTPUT"
+    else
+        # Middle lines - add comma
+        echo "${hex_values[i]}," >> "$COE_OUTPUT"
+    fi
+done
+
+echo "COE file generated successfully"
 
 # Clean up temporary files
 rm -f test.s test.o test.elf test.bin

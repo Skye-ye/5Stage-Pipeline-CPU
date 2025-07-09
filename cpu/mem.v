@@ -7,7 +7,7 @@ module mem #(
     input          clk,
     
     // Instruction memory interface (matches im.v)
-    input  [13:2]  im_addr,
+    input  [9:0]  im_addr,
     output [31:0]  im_dout,
     
     // Data memory interface (matches dm.v)  
@@ -19,13 +19,13 @@ module mem #(
     output [31:0]  dm_dout
 );
 
-    // Unified memory array - 16KB (4096 words)
-    reg [31:0] memory [4095:0];
+    // Unified memory array - 4KB (1024 words)
+    reg [31:0] memory [1023:0];
     
     // Initialize memory from program file
     initial begin
         // Initialize all memory to zero first
-        for (integer i = 0; i < 4096; i = i + 1) begin
+        for (integer i = 0; i < 1024; i = i + 1) begin
             memory[i] = 32'h0;
         end
         
@@ -40,7 +40,7 @@ module mem #(
     
     // ========== Data Memory Interface ==========
     // Word address and byte offset for data memory
-    wire [11:0] dm_word_addr = dm_addr[13:2];  // Word address
+    wire [9:0] dm_word_addr = dm_addr[11:2];  // Word address
     wire [1:0] dm_byte_offset = dm_addr[1:0]; // Byte offset within word
     
     // Data memory write operations (synchronous, same as original dm.v)

@@ -20,6 +20,7 @@ set board_files [list \
     "board/MIO_BUS.v" \
     "board/MULTI_CH32.v" \
     "board/SEG7x16.v" \
+    "board/uart.v" \
     "board/xgriscv_fpga_top.v" \
 ]
 
@@ -35,11 +36,11 @@ set cpu_files [list \
     "cpu/rf.v" \
     "cpu/interrupt.v" \
     "cpu/csr.v" \
-    "cpu/timer.v" \
+    "cpu/trap.v" \
 ]
 
 set constraint_file "board/Nexys4DDR_CPU.xdc"
-set coe_file "instr/fpga/riscv-studentnosorting.coe"
+set coe_file "instr/morse/program.coe"
 
 # ========================================
 # CREATE PROJECT
@@ -73,28 +74,91 @@ add_files -norecurse $board_files
 add_files -fileset constrs_1 -norecurse $constraint_file
 
 # ========================================
-# CREATE ROM IP CORE
+# CREATE INSTRUCTION MEMORY (ROM) IP CORE
 # ========================================
 
-# Create instruction memory ROM IP
+puts "Creating Distributed Memory Generator IP for instruction memory (ROM)..."
+
+# Check if COE file exists
+if {![file exists $coe_file]} {
+    puts "ERROR: COE file not found: $coe_file"
+    puts "Please generate the COE file first using the build process in instr/morse/"
+    exit 1
+}
+
+# Create Distributed Memory Generator IP for instruction memory (ROM)
 create_ip -name dist_mem_gen -vendor xilinx.com -library ip -module_name imem
 
+# Configure the Distributed Memory Generator for ROM
 set_property -dict [list \
     CONFIG.memory_type {ROM} \
     CONFIG.data_width {32} \
-    CONFIG.depth {128} \
+    CONFIG.depth {1024} \
     CONFIG.coefficient_file [file normalize $coe_file] \
     CONFIG.input_options {non_registered} \
     CONFIG.output_options {non_registered} \
 ] [get_ips imem]
 
+puts "Generating Instruction Memory IP..."
+
 # Generate IP
 generate_target all [get_files imem.xci]
 
-# Optional: Synthesize IP
+# Synthesize IP
+puts "Synthesizing Instruction Memory IP..."
 create_ip_run [get_files imem.xci]
 launch_runs imem_synth_1 -jobs 12
 wait_on_run imem_synth_1
+
+if {[get_property PROGRESS [get_runs imem_synth_1]] != "100%"} {
+    puts "ERROR: Instruction Memory IP synthesis failed!"
+    exit 1
+} else {
+    puts "Instruction Memory Generator IP created and synthesized successfully!"
+}
+
+# ========================================
+# CREATE DATA MEMORY (RAM) IP CORE
+# ========================================
+
+puts "Creating Block Memory Generator IP for data memory (RAM)..."
+
+# Create Block Memory Generator IP for data memory (RAM)
+create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_dmem
+
+# Configure the Block Memory Generator for RAM
+set_property -dict [list \
+    CONFIG.Memory_Type {Single_Port_RAM} \
+    CONFIG.Use_Byte_Write_Enable {true} \
+    CONFIG.Byte_Size {8} \
+    CONFIG.Write_Width_A {32} \
+    CONFIG.Write_Depth_A {1024} \
+    CONFIG.Read_Width_A {32} \
+    CONFIG.Enable_A {Always_Enabled} \
+    CONFIG.Register_PortA_Output_of_Memory_Primitives {false} \
+    CONFIG.Load_Init_File {true} \
+    CONFIG.Coe_File [file normalize $coe_file] \
+    CONFIG.Fill_Remaining_Memory_Locations {true} \
+    CONFIG.Remaining_Memory_Locations {00000000} \
+] [get_ips blk_mem_gen_dmem]
+
+puts "Generating Data Memory IP..."
+
+# Generate IP
+generate_target all [get_files blk_mem_gen_dmem.xci]
+
+# Synthesize IP
+puts "Synthesizing Data Memory IP..."
+create_ip_run [get_files blk_mem_gen_dmem.xci]
+launch_runs blk_mem_gen_dmem_synth_1 -jobs 12
+wait_on_run blk_mem_gen_dmem_synth_1
+
+if {[get_property PROGRESS [get_runs blk_mem_gen_dmem_synth_1]] != "100%"} {
+    puts "ERROR: Data Memory IP synthesis failed!"
+    exit 1
+} else {
+    puts "Data Memory Generator IP created and synthesized successfully!"
+}
     
 # ========================================
 # SET TOP MODULE

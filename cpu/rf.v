@@ -11,12 +11,14 @@ module rf(
 
     integer i;
 
+    // Register file with write-on-negedge, read-on-posedge behavior
+    // Register x0 is always 0 in RISC-V (hardwired zero)
     always @(negedge clk or posedge rst) begin
         if (rst) begin
-            for (i=1; i<32; i=i+1)
+            for (i=0; i<32; i=i+1)
                 rf[i] <= 0;
         end
-        else if (RFWr && A3 != 0) begin
+        else if (RFWr && A3 != 0) begin  // Never write to x0 (A3 != 0)
             rf[A3] <= WD;
         end
     end

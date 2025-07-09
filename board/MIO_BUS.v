@@ -7,33 +7,51 @@ module MIO_BUS(
     input  wire [15:0] sw_i,           // Switch input (16-bit)
     input  wire [31:0] cpu_data_out,   // Data from CPU
     input  wire [31:0] cpu_data_addr,  // Address from CPU
-    input  wire [3:0]  cpu_data_amp,   // Access pattern from CPU
     input  wire [31:0] ram_data_out,   // Data from data memory
+    input  wire [2:0]  cpu_DMType,     // Data memory access type from CPU
+    input  wire        uart_ready,     // UART ready signal
     
     output reg  [31:0] cpu_data_in,    // Data to CPU
     output reg  [31:0] ram_data_in,    // Data to data memory
-    output reg  [6:0]  ram_addr,       // Address for data memory
+    output reg  [31:0] ram_addr,       // Address for data memory
+    output reg  [2:0]  DMType,         // Data memory access type
     output reg  [31:0] cpuseg7_data,   // Data for 7-segment display
     output reg         ram_we,         // Write enable for data memory
-    output reg  [3:0]  ram_amp,        // Access pattern for data memory
-    output reg         seg7_we         // Write enable for 7-segment display
+    output reg         seg7_we,        // Write enable for 7-segment display
+    output reg         uart_we,        // Write enable for UART
+    output reg  [7:0]  uart_data_in    // Data to UART
 );
 
     // Memory Map:
+    // 0x0000F000 : UART status register (read-only)
+    // 0x0000F004 : UART data register (write-only)
     // 0xFFFF0004 : Switch input (read-only)
     // 0xFFFF000C : 7-segment display (write-only) 
     // Other      : Data memory (read/write)
     always @(*) begin
         // Default values
-        ram_addr     = 7'h0;
+        ram_addr     = 32'h0;
         ram_data_in = 32'h0;
         cpuseg7_data = 32'h0;
         cpu_data_in = 32'h0;
         seg7_we      = 1'b0;
         ram_we       = 1'b0;
-        ram_amp      = 4'b0;
-        
+        uart_we      = 1'b0;
+        uart_data_in = 8'h0;
+        DMType       = 3'b0;
+
         case (cpu_data_addr[31:0])
+            // UART Status Register (Read-Only)
+            32'h0000F000: begin
+                cpu_data_in = {31'b0, uart_ready};
+            end
+
+            // UART Data Register (Write-Only)
+            32'h0000F004: begin
+                uart_we = mem_w;
+                uart_data_in = cpu_data_out[7:0];
+            end
+
             // Switch Input (Read-Only)
             32'hFFFF0004: begin
                 cpu_data_in = {16'h0000, sw_i};
@@ -47,10 +65,10 @@ module MIO_BUS(
             
             // Data Memory (Read/Write)
             default: begin
-                ram_addr     = cpu_data_addr[8:2];  // Word-aligned address
+                ram_addr     = cpu_data_addr;  // Word-aligned address
                 ram_data_in  = cpu_data_out;
                 ram_we       = mem_w;
-                ram_amp      = cpu_data_amp;
+                DMType       = cpu_DMType;
                 cpu_data_in  = ram_data_out;
             end
         endcase

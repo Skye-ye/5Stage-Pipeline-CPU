@@ -3,8 +3,8 @@
 .global _start
 
 _start:
-    # Set stack pointer to fixed value (12KB into 16KB memory)
-    li sp, 0x4000
+    # Set stack pointer to fixed value (3KB into 4KB memory)
+    li sp, 0x0C00
     
     # Clear BSS section using symbols from linker script
     la t0, _bss_start

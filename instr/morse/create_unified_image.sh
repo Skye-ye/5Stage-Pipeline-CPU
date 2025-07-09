@@ -16,7 +16,7 @@ riscv64-unknown-elf-objcopy -O binary morse.elf unified.bin
 
 # Check the size and pad to 4KB if needed
 ACTUAL_SIZE=$(stat -c%s unified.bin 2>/dev/null || stat -f%z unified.bin)
-TARGET_SIZE=16384
+TARGET_SIZE=4096
 
 if [ $ACTUAL_SIZE -lt $TARGET_SIZE ]; then
     echo "Padding binary from $ACTUAL_SIZE to $TARGET_SIZE bytes"

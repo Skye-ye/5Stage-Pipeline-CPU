@@ -3,9 +3,6 @@
 // Interrupt Controller Module
 // Handles external interrupts, timer interrupts, and software interrupts
 module interrupt(
-    input        clk,
-    input        reset,
-    
     // CSR interface
     input [31:0] mie,             // Machine interrupt enable register
     input [31:0] mip,             // Machine interrupt pending register

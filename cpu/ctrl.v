@@ -21,7 +21,6 @@ module ctrl(
     output       CSRWrite, // CSR write enable
     output       CSRRead,  // CSR read enable
     output [2:0] CSROp,    // CSR operation
-    output       IsCSR,    // CSR instruction indicator
 
     // Privileged instruction support
     output       IsMRET,   // MRET instruction indicator
@@ -181,9 +180,6 @@ module ctrl(
     
     // CSR operation
     assign CSROp = Funct3;
-    
-    // CSR instruction indicator
-    assign IsCSR = csrtype;
     
     // MRET instruction indicator
     assign IsMRET = i_mret;

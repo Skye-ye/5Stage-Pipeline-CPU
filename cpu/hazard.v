@@ -7,13 +7,10 @@ module hazard(
     
     // Pipeline Destination Registers
     input [4:0] rd_EX,               // destination register in EX stage
-    input [4:0] rd_MEM,              // destination register in MEM stage
     
     // Pipeline Control Signals
     input RegWrite_EX,               // register write enable in EX stage
-    input RegWrite_MEM,              // register write enable in MEM stage
     input MemRead_EX,                // memory read in EX stage (load instruction)
-    input MemRead_MEM,               // memory read in MEM stage (load instruction)
     input MemWrite_ID,               // memory write in ID stage (store instruction)
     input branch_result,             // branch result signal
     input IsBranch_ID,               // indicates if current ID instruction is a branch
@@ -47,8 +44,6 @@ module hazard(
     // Load-use hazard detection
     wire rs1_hazard_EX = check_dependency(rd_EX, rs1_ID, RegWrite_EX);
     wire rs2_hazard_EX = check_dependency(rd_EX, rs2_ID, RegWrite_EX);
-    wire rs1_hazard_MEM = check_dependency(rd_MEM, rs1_ID, RegWrite_MEM);
-    wire rs2_hazard_MEM = check_dependency(rd_MEM, rs2_ID, RegWrite_MEM);
 
     // Special case:
     // lw x1, 0(x2)

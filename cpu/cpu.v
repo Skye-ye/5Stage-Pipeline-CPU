@@ -8,14 +8,14 @@ module cpu(
     // Unified Memory Interface
     output        IMRd,       // instruction memory read enable
     output [31:0] IMAddr,     // instruction memory address
-    input  [31:0] IMOut,      // instruction from memory
+    input  [31:0] Inst_in,    // instruction from memory
     
     output        DMRd,       // data memory read enable
     output        DMWr,       // data memory write enable
     output [31:0] DMAddr,     // data memory address
-    output [31:0] DMIn,       // data to memory
+    output [31:0] Data_out,   // data to memory
     output [2:0]  DMType,     // data memory access type
-    input  [31:0] DMOut,      // data from memory
+    input  [31:0] Data_in,    // data from memory
     
     // Interrupt Interface
     input         external_int, // External interrupt request
@@ -41,7 +41,7 @@ module cpu(
     reg [2:0]  IDEX_DMType, IDEX_CSROp;
     reg [1:0]  IDEX_WDSel;
     reg        IDEX_RegWrite, IDEX_MemWrite, IDEX_MemRead, IDEX_ALUSrc;
-    reg        IDEX_CSRWrite, IDEX_CSRRead, IDEX_IsCSR, IDEX_IsMRET;
+    reg        IDEX_CSRWrite, IDEX_CSRRead, IDEX_IsMRET;
     reg [11:0] IDEX_CSRAddr;
     reg        IDEX_valid;
     reg        IDEX_Exception;
@@ -53,7 +53,7 @@ module cpu(
     reg [2:0]  EXMEM_DMType, EXMEM_CSROp;
     reg [1:0]  EXMEM_WDSel;
     reg        EXMEM_RegWrite, EXMEM_MemWrite, EXMEM_MemRead;
-    reg        EXMEM_CSRWrite, EXMEM_CSRRead, EXMEM_IsCSR, EXMEM_IsMRET;
+    reg        EXMEM_CSRWrite, EXMEM_CSRRead, EXMEM_IsMRET;
     reg [11:0] EXMEM_CSRAddr;
     reg        EXMEM_valid;
     reg        EXMEM_Exception;
@@ -64,7 +64,6 @@ module cpu(
     reg [4:0]  MEMWB_rd;
     reg [1:0]  MEMWB_WDSel;
     reg        MEMWB_RegWrite;
-    reg        MEMWB_IsCSR, MEMWB_IsMRET;
     reg        MEMWB_valid;
     reg        MEMWB_Exception;
     reg [31:0] MEMWB_ExceptionCause;
@@ -84,7 +83,7 @@ module cpu(
     wire [5:0]  EXTOp_ID;
     wire        IsBranch_ID, IsJAL_ID, IsJALR_ID;
     wire [11:0] csr_addr_ID;              // CSR address
-    wire        CSRWrite_ID, CSRRead_ID, IsCSR_ID, IsMRET_ID;
+    wire        CSRWrite_ID, CSRRead_ID, IsMRET_ID;
     wire [2:0]  CSROp_ID;
     wire        Exception_ID;
     wire [31:0] ExceptionCause_ID;
@@ -108,6 +107,7 @@ module cpu(
     wire [1:0] forwardA_branch, forwardB_branch;
     wire       forwardMEM;
     wire       branch_taken;
+    wire [31:0] branch_target;
     
     // Interrupt and CSR signals
     wire        interrupt_req;
@@ -158,7 +158,7 @@ module cpu(
             IFID_valid <= 1'b0;
         end else if (!stall) begin
             IFID_PC <= PC_IF;
-            IFID_inst <= IMOut;
+            IFID_inst <= Inst_in;
             IFID_valid <= 1'b1;
         end
     end
@@ -185,7 +185,6 @@ module cpu(
         .CSRWrite(CSRWrite_ID),
         .CSRRead(CSRRead_ID),
         .CSROp(CSROp_ID),
-        .IsCSR(IsCSR_ID),
         .IsMRET(IsMRET_ID),
         .Exception(Exception_ID),
         .ExceptionCause(ExceptionCause_ID)
@@ -206,8 +205,6 @@ module cpu(
     
     // Interrupt Controller Instance
     interrupt U_INTERRUPT(
-        .clk(clk),
-        .reset(reset),
         .mie(mie),
         .mip(mip),
         .global_int_enable(global_int_enable),
@@ -234,7 +231,7 @@ module cpu(
             2'b01: branch_A = WriteData_WB;        // Forward from WB stage
             2'b10: begin                           // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: branch_A = DMOut;      // Memory data
+                    `WDSel_FromMEM: branch_A = Data_in;      // Memory data
                     `WDSel_FromCSR: branch_A = csr_rdata;    // CSR data
                     default:        branch_A = EXMEM_ALUOut; // ALU data
                 endcase
@@ -244,6 +241,9 @@ module cpu(
         endcase
     end
     
+    // Branch target calculation (depends on branch_A and imm_ID)
+    assign branch_target = IsJALR_ID ? (branch_A + imm_ID) : (IFID_PC + imm_ID);
+    
     // Branch forwarding mux for register B
     reg [31:0] branch_B;
     always @(*) begin
@@ -252,7 +252,7 @@ module cpu(
             2'b01: branch_B = WriteData_WB;        // Forward from WB stage
             2'b10: begin                           // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: branch_B = DMOut;      // Memory data
+                    `WDSel_FromMEM: branch_B = Data_in;      // Memory data
                     `WDSel_FromCSR: branch_B = csr_rdata;    // CSR data
                     default:        branch_B = EXMEM_ALUOut; // ALU data
                 endcase
@@ -271,9 +271,6 @@ module cpu(
         .branch_result(branch_result)
     );
     
-    // Branch target calculation
-    wire [31:0] branch_target = IsJALR_ID ? (branch_A + imm_ID) : (IFID_PC + imm_ID);
-
     // ID/EX Pipeline Register
     always @(posedge clk or posedge reset) begin
         if (reset || flush_IDEX) begin
@@ -294,7 +291,6 @@ module cpu(
             IDEX_ALUSrc <= 1'b0;
             IDEX_CSRWrite <= 1'b0;
             IDEX_CSRRead <= 1'b0;
-            IDEX_IsCSR <= 1'b0;
             IDEX_IsMRET <= 1'b0;
             IDEX_CSRAddr <= 12'h000;
             IDEX_Exception <= 1'b0;
@@ -318,7 +314,6 @@ module cpu(
             IDEX_ALUSrc <= ALUSrc_ID;
             IDEX_CSRWrite <= CSRWrite_ID;
             IDEX_CSRRead <= CSRRead_ID;
-            IDEX_IsCSR <= IsCSR_ID;
             IDEX_IsMRET <= IsMRET_ID;
             IDEX_CSRAddr <= csr_addr_ID;
             IDEX_Exception <= Exception_ID;
@@ -336,7 +331,7 @@ module cpu(
             2'b01: ALU_A = WriteData_WB;       // Forward from WB stage  
             2'b10: begin                       // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: ALU_A = DMOut;      // Memory data
+                    `WDSel_FromMEM: ALU_A = Data_in;      // Memory data
                     `WDSel_FromCSR: ALU_A = csr_rdata;    // CSR data
                     default:        ALU_A = EXMEM_ALUOut; // ALU data
                 endcase
@@ -353,7 +348,7 @@ module cpu(
             2'b01: ALU_B_forwarded = WriteData_WB;  // Forward from WB stage
             2'b10: begin                            // Forward from MEM stage
                 case (EXMEM_WDSel)
-                    `WDSel_FromMEM: ALU_B_forwarded = DMOut;      // Memory data
+                    `WDSel_FromMEM: ALU_B_forwarded = Data_in;      // Memory data
                     `WDSel_FromCSR: ALU_B_forwarded = csr_rdata;    // CSR data
                     default:        ALU_B_forwarded = EXMEM_ALUOut; // ALU data
                 endcase
@@ -390,7 +385,6 @@ module cpu(
             EXMEM_MemRead <= 1'b0;
             EXMEM_CSRWrite <= 1'b0;
             EXMEM_CSRRead <= 1'b0;
-            EXMEM_IsCSR <= 1'b0;
             EXMEM_IsMRET <= 1'b0;
             EXMEM_CSRAddr <= 12'h000;
             EXMEM_Exception <= 1'b0;
@@ -410,7 +404,6 @@ module cpu(
             EXMEM_MemRead <= IDEX_MemRead;
             EXMEM_CSRWrite <= IDEX_CSRWrite;
             EXMEM_CSRRead <= IDEX_CSRRead;
-            EXMEM_IsCSR <= IDEX_IsCSR;
             EXMEM_IsMRET <= IDEX_IsMRET;
             EXMEM_CSRAddr <= IDEX_CSRAddr;
             EXMEM_Exception <= IDEX_Exception;
@@ -421,14 +414,14 @@ module cpu(
 
     // ========== 4 MEM Stage ==========
     // Data memory interface
-    assign DMAddr = EXMEM_ALUOut;
-    assign DMIn = forwardMEM ? WriteData_WB : EXMEM_RD2;
+    assign DMAddr = ((EXMEM_MemWrite | EXMEM_MemRead) & EXMEM_valid) ? EXMEM_ALUOut : 32'h00000000;
+    assign Data_out = forwardMEM ? WriteData_WB : EXMEM_RD2;
     assign DMType = EXMEM_DMType;
-    assign DMWr = EXMEM_MemWrite & EXMEM_valid;
+    assign DMWr = EXMEM_MemWrite & !trap_taken_WB & EXMEM_valid; // When trap is taken, data memory should not be written
     assign DMRd = EXMEM_MemRead & EXMEM_valid;
 
     // CSR signals
-    assign mret_taken = MEMWB_IsMRET & MEMWB_valid;
+    assign mret_taken = EXMEM_IsMRET & EXMEM_valid;
 
     // CSR Unit Instance
     csr U_CSR(
@@ -465,21 +458,17 @@ module cpu(
             MEMWB_rd <= 5'b00000;
             MEMWB_WDSel <= 2'b00;
             MEMWB_RegWrite <= 1'b0;
-            MEMWB_IsCSR <= 1'b0;
-            MEMWB_IsMRET <= 1'b0;
             MEMWB_Exception <= 1'b0;
             MEMWB_ExceptionCause <= 32'h00000000;
             MEMWB_valid <= 1'b0;
         end else begin
             MEMWB_ALUOut <= EXMEM_ALUOut;
-            MEMWB_MemData <= DMOut;
+            MEMWB_MemData <= Data_in;
             MEMWB_PC <= EXMEM_PC;
             MEMWB_CSRData <= csr_rdata;
             MEMWB_rd <= EXMEM_rd;
             MEMWB_WDSel <= EXMEM_WDSel;
             MEMWB_RegWrite <= EXMEM_RegWrite;
-            MEMWB_IsCSR <= EXMEM_IsCSR;
-            MEMWB_IsMRET <= EXMEM_IsMRET;
             MEMWB_Exception <= EXMEM_Exception;
             MEMWB_ExceptionCause <= EXMEM_ExceptionCause;
             MEMWB_valid <= EXMEM_valid;
@@ -516,11 +505,8 @@ module cpu(
         .rs1_ID(rs1_ID),
         .rs2_ID(rs2_ID),
         .rd_EX(IDEX_rd),
-        .rd_MEM(EXMEM_rd),
         .RegWrite_EX(IDEX_RegWrite),
-        .RegWrite_MEM(EXMEM_RegWrite),
         .MemRead_EX(IDEX_WDSel == `WDSel_FromMEM),
-        .MemRead_MEM(EXMEM_WDSel == `WDSel_FromMEM),
         .MemWrite_ID(MemWrite_ID),
         .branch_result(branch_result),
         .IsBranch_ID(IsBranch_ID),

@@ -63,13 +63,13 @@ static inline char morseToChar(const char *morse) {
 }
 
 static inline void uart_putchar(char c) {
-  volatile unsigned char *uart_tx = (volatile unsigned char *)0x00;
-  // volatile unsigned int *uart_status = (volatile unsigned int *)0xF004;
+  volatile unsigned char *uart_tx = (volatile unsigned char *)0xF004;
+  volatile unsigned int *uart_status = (volatile unsigned int *)0xF000;
 
   // Wait for TX ready bit
-  // while ((*uart_status & 1) == 0) {
-  //   // Busy wait
-  // }
+  while ((*uart_status & 1) == 0) {
+    // Busy wait
+  }
 
   // Send character
   *uart_tx = (unsigned char)c;
@@ -157,9 +157,7 @@ int main(void) {
   decode_morse_message(morse_input, decoded_output);
 
   // Output result - use string literals (will be in .rodata)
-  uart_puts("Decoded: ");
   uart_puts(decoded_output);
-  uart_puts("\r\n");
 
   return 0;
 }

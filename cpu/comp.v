@@ -31,14 +31,14 @@ module comp #(
          // Unified Memory Interface
          .IMRd(IMRd),               // output: instruction memory read enable
          .IMAddr(IMAddr),           // output: instruction memory address
-         .IMOut(IMOut),             // input:  instruction from memory
+         .Inst_in(IMOut),           // input:  instruction from memory
          
          .DMRd(DMRd),               // output: data memory read enable
          .DMWr(DMWr),               // output: data memory write enable
          .DMAddr(DMAddr),           // output: data memory address
-         .DMIn(DMIn),               // output: data to memory
+         .Data_out(DMIn),           // output: data to memory
          .DMType(DMType),           // output: data memory access type
-         .DMOut(DMOut),             // input:  data from memory
+         .Data_in(DMOut),           // input:  data from memory
          
          .external_int(external_int), // input:  external interrupt from external interrupt generator
          .timer_int(timer_int),     // input:  timer interrupt from timer module
@@ -53,7 +53,7 @@ module comp #(
          .clk(clk),                 // input:  cpu clock
          
          // Instruction memory interface
-         .im_addr(IMAddr[13:2]),    // input:  instruction address
+         .im_addr(IMAddr[11:2]),    // input:  instruction address
          .im_dout(IMOut),           // output: instruction
          
          // Data memory interface
