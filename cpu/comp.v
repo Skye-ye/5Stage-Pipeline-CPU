@@ -1,7 +1,7 @@
 module comp #(
     parameter INSTR_FILE = "./instr/morse/program.dat",
-    parameter TIMER_LIMIT = 100,
-    parameter EXT_INT_LIMIT = 200
+    parameter TIMER_LIMIT = 200,
+    parameter EXT_INT_LIMIT = 1000
 )(
     input          clk,
     input          rstn,

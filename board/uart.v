@@ -3,17 +3,16 @@
 // UART Storage Module
 // Provides memory-mapped UART functionality with 8-byte storage for RISC-V CPU
 // Memory Map:
-//   0xF000: Status register (bit 0 = ready to accept data, 1 = ready)
 //   0xF004: Data register (write character to store)
+//   0xF00C: Clear register (write any value to clear buffer)
 module uart(
     input  wire        clk,           // System clock
     input  wire        rst,           // Reset (active high)
     
     // Memory-mapped interface
     input  wire        uart_we,       // Write enable from MIO_BUS
+    input  wire        uart_clear,    // Clear enable from MIO_BUS
     input  wire [7:0]  data_in,       // Data from CPU (8-bit)
-    output reg         uart_ready,    // UART ready signal for MIO_BUS
-    
     // 7-segment display interface
     output reg  [63:0] uart_display_data  // 8 bytes for 7-segment display
 );
@@ -21,18 +20,17 @@ module uart(
     // 8-byte storage buffer
     reg [7:0] storage_buffer [0:7];  // 8 bytes of storage
     reg [2:0] write_ptr;             // Write pointer (0-7)
+    reg [2:0] read_ptr;              // Read pointer (0-7)
     reg       buffer_full;           // Buffer full indicator
+    reg [3:0] count;                 // Number of valid bytes in buffer (0-8)
     
-    // Status: ready when buffer is not full
-    always @(*) begin
-        uart_ready = ~buffer_full;
-    end
-    
-    // Data write logic
+    // Data write logic with circular buffer and clear functionality
     always @(posedge clk or posedge rst) begin
-        if (rst) begin
+        if (rst | (uart_we && uart_clear)) begin
             write_ptr <= 3'h0;
+            read_ptr <= 3'h0;
             buffer_full <= 1'b0;
+            count <= 4'h0;
             // Initialize buffer to spaces (0x20)
             storage_buffer[0] <= 8'h20;
             storage_buffer[1] <= 8'h20;
@@ -43,26 +41,47 @@ module uart(
             storage_buffer[6] <= 8'h20;
             storage_buffer[7] <= 8'h20;
         end else begin
-            if (uart_we && uart_ready) begin
+            if (uart_we) begin
                 // Store the character in the buffer
                 storage_buffer[write_ptr] <= data_in;
                 
-                // Update write pointer and buffer status
-                if (write_ptr == 3'h7) begin
-                    // Just wrote to the last position, buffer is now full
-                    buffer_full <= 1'b1;
-                    // Keep write_ptr at 7, don't wrap around
+                // Always advance write pointer (circular)
+                write_ptr <= write_ptr + 1;
+                
+                if (buffer_full) begin
+                    // Buffer is full, pop the oldest data by advancing read pointer
+                    read_ptr <= read_ptr + 1;
+                    // Count stays at 8 when buffer is full
                 end else begin
-                    write_ptr <= write_ptr + 1;
+                    // Buffer not full, increment count
+                    count <= count + 1;
+                    if (count == 4'h7) begin
+                        // After this write, buffer will be full
+                        buffer_full <= 1'b1;
+                    end
                 end
             end
         end
     end
     
     // Output buffer contents to 7-segment display
+    // Display the data in chronological order (oldest to newest)
     always @(*) begin
-        uart_display_data = {storage_buffer[7], storage_buffer[6], storage_buffer[5], storage_buffer[4],
-                            storage_buffer[3], storage_buffer[2], storage_buffer[1], storage_buffer[0]};
+        if (buffer_full) begin
+            // When buffer is full, display from read_ptr (oldest) to write_ptr-1 (newest)
+            uart_display_data = {storage_buffer[read_ptr], 
+                                storage_buffer[read_ptr + 1], 
+                                storage_buffer[read_ptr + 2], 
+                                storage_buffer[read_ptr + 3],
+                                storage_buffer[read_ptr + 4], 
+                                storage_buffer[read_ptr + 5], 
+                                storage_buffer[read_ptr + 6], 
+                                storage_buffer[read_ptr + 7]};
+        end else begin
+            // When buffer is not full, display from position 0
+            uart_display_data = {storage_buffer[0], storage_buffer[1], storage_buffer[2], storage_buffer[3],
+                                storage_buffer[4], storage_buffer[5], storage_buffer[6], storage_buffer[7]};
+        end
     end
 
 endmodule

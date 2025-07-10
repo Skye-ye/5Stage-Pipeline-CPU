@@ -6,6 +6,7 @@ module xgriscv_fpga_top(
     input  wire        clk,         // System clock (100MHz)
     input  wire        rstn,        // Reset (active low)
     input  wire [15:0] sw_i,        // Switch inputs
+    input  wire        btnc_i,      // Center button input
     output wire [7:0]  disp_seg_o,  // 7-segment display segments
     output wire [7:0]  disp_an_o    // 7-segment display anodes
 );
@@ -40,10 +41,18 @@ module xgriscv_fpga_top(
     reg [31:0] cycle_count;       // CPU cycle counter
     
     // UART signals
-    wire        uart_ready;       // UART ready signal
     wire        uart_we;          // Write enable for UART
+    wire        uart_clear;       // Clear enable for UART
     wire [7:0]  uart_data_in;     // Data to UART (8-bit)
     wire [63:0] uart_display_data; // 8 bytes for 7-segment display
+    
+    // Timer signals
+    wire        timer_int;        // Timer interrupt signal
+    wire        timer_int_ack;    // Timer interrupt acknowledge
+    
+    // External interrupt signals
+    wire        external_int;     // External interrupt signal
+    wire        ext_int_ack;      // External interrupt acknowledge
     
     // Register Selection for Debug Display
     // Use SW[4:0] to select which register to display
@@ -82,7 +91,6 @@ module xgriscv_fpga_top(
         .cpu_data_addr (cpu_data_addr), // Address from CPU
         .cpu_DMType    (cpu_DMType),    // Data memory access type from CPU
         .ram_data_out  (dm_dout),       // Data from data memory
-        .uart_ready    (uart_ready),    // UART ready signal
         .cpu_data_in   (cpu_data_in),   // Data to CPU
         .ram_data_in   (dm_din),        // Data to data memory
         .ram_addr      (ram_addr),      // Address to data memory
@@ -91,7 +99,8 @@ module xgriscv_fpga_top(
         .ram_we        (ram_we),        // Write enable to data memory
         .seg7_we       (seg7_we),       // Write enable to display
         .uart_we       (uart_we),       // Write enable to UART
-        .uart_data_in  (uart_data_in) // Data to UART (8-bit)
+        .uart_clear    (uart_clear),    // Clear enable to UART
+        .uart_data_in  (uart_data_in)   // Data to UART (8-bit)
     );
     
     // UART Module
@@ -99,8 +108,8 @@ module xgriscv_fpga_top(
         .clk              (Clk_CPU),            // CPU clock
         .rst              (rst),                // Reset
         .uart_we          (uart_we),            // Write enable from MIO_BUS
+        .uart_clear       (uart_clear),         // Clear enable from MIO_BUS
         .data_in          (uart_data_in),       // Data from CPU (8-bit)
-        .uart_ready       (uart_ready),         // Ready signal to MIO_BUS
         .uart_display_data(uart_display_data)   // 8 bytes for 7-segment display
     );
     
@@ -145,10 +154,10 @@ module xgriscv_fpga_top(
         .Data_in      (cpu_data_in),   // Data input from memory system
         
         // Interrupt Interface
-        .external_int (1'b0),          // External interrupt (tied off for now)
-        .timer_int    (1'b0),          // Timer interrupt (tied off for now)
-        .timer_int_ack(),              // Timer interrupt acknowledge (unconnected)
-        .ext_int_ack  (),              // External interrupt acknowledge (unconnected)
+        .external_int (external_int),  // External interrupt from button
+        .timer_int    (timer_int),     // Timer interrupt from board timer
+        .timer_int_ack(timer_int_ack), // Timer interrupt acknowledge to board timer
+        .ext_int_ack  (ext_int_ack),   // External interrupt acknowledge to button module
         
         // Debug Interface
         .reg_sel      (reg_sel),       // Register select for debug
@@ -173,6 +182,23 @@ module xgriscv_fpga_top(
         .rst     (rst),      // Reset
         .SW15    (sw_i[15]), // Clock speed selection switch
         .Clk_CPU (Clk_CPU)   // CPU clock output
+    );
+    
+    // Timer Module for Interrupt Generation
+    timer U_TIMER(
+        .clk          (clk),           // System clock (100MHz)
+        .reset        (rst),           // Reset
+        .timer_int_ack(timer_int_ack), // Acknowledge from CPU
+        .timer_int    (timer_int)      // Interrupt to CPU
+    );
+    
+    // External Interrupt Module for Button Input
+    external_int U_EXT_INT(
+        .clk          (clk),           // System clock (100MHz)
+        .reset        (rst),           // Reset
+        .btnc_i       (btnc_i),        // Center button input
+        .ext_int_ack  (ext_int_ack),   // Acknowledge from CPU
+        .external_int (external_int)   // Interrupt to CPU
     );
 
 endmodule

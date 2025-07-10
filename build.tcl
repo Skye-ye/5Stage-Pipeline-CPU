@@ -22,6 +22,8 @@ set board_files [list \
     "board/SEG7x16.v" \
     "board/uart.v" \
     "board/xgriscv_fpga_top.v" \
+    "board/timer.v" \
+    "board/external_int.v" \
 ]
 
 set cpu_files [list \
@@ -40,7 +42,7 @@ set cpu_files [list \
 ]
 
 set constraint_file "board/Nexys4DDR_CPU.xdc"
-set coe_file "instr/morse/program.coe"
+set coe_file "instr/interrupt/program.coe"
 
 # ========================================
 # CREATE PROJECT
@@ -82,7 +84,7 @@ puts "Creating Distributed Memory Generator IP for instruction memory (ROM)..."
 # Check if COE file exists
 if {![file exists $coe_file]} {
     puts "ERROR: COE file not found: $coe_file"
-    puts "Please generate the COE file first using the build process in instr/morse/"
+    puts "Please generate the COE file first using the build process in instr/interrupt/"
     exit 1
 }
 

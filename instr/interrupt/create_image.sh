@@ -3,8 +3,8 @@
 # Create unified memory image combining instructions and data
 set -e
 
-if [ ! -f "morse.elf" ]; then
-    echo "Error: morse.elf not found. Run build.sh first."
+if [ ! -f "int.elf" ]; then
+    echo "Error: int.elf not found. Run build.sh first."
     exit 1
 fi
 
@@ -12,7 +12,7 @@ echo "Creating unified memory image..."
 
 # Simple approach: extract complete binary from ELF
 echo "Extracting complete binary from ELF..."
-riscv64-unknown-elf-objcopy -O binary morse.elf unified.bin
+riscv64-unknown-elf-objcopy -O binary int.elf unified.bin
 
 # Check the size and pad to 4KB if needed
 ACTUAL_SIZE=$(stat -c%s unified.bin 2>/dev/null || stat -f%z unified.bin)

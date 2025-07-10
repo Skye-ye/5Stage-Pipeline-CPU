@@ -19,6 +19,6 @@ module CLK_DIV(
         end
     end
     
-    assign Clk_CPU = SW15 ? clkdiv[25] : clkdiv[20];
+    assign Clk_CPU = SW15 ? clkdiv[25] : clkdiv[2];
 
 endmodule
