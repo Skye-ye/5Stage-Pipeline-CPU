@@ -48,21 +48,34 @@ module external_int(
     end
     
     // External interrupt generation on button press (rising edge)
+    reg [7:0] int_clear_counter;
+    
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             external_int <= 1'b0;
             btnc_prev <= 1'b0;
+            int_clear_counter <= 8'h0;
         end else begin
             btnc_prev <= btnc_debounced;
             
             // Handle interrupt acknowledgment
             if (external_int && ext_int_ack) begin
                 external_int <= 1'b0;     // Clear interrupt when acknowledged
+                int_clear_counter <= 8'h0;
+            end
+            // Auto-clear interrupt after a few cycles to prevent infinite loop
+            else if (external_int) begin
+                int_clear_counter <= int_clear_counter + 1;
+                if (int_clear_counter == 8'hFF) begin
+                    external_int <= 1'b0;
+                    int_clear_counter <= 8'h0;
+                end
             end
             
             // Generate interrupt on button press (rising edge)
             if (btnc_debounced && !btnc_prev && !external_int) begin
                 external_int <= 1'b1;
+                int_clear_counter <= 8'h0;
             end
         end
     end
